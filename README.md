@@ -126,3 +126,10 @@ bash scripts/push-termux.sh \
 ```
 
 Script akan `npm install`, menjalankan syntax check + test, commit, lalu push ke branch `main`.
+
+## v1.1 — Vercel HTTP 500 fix
+
+- API entry point memakai Web Handler `export default { fetch() {} }` sesuai runtime Vercel terbaru.
+- Converter di-load dengan dynamic import agar error dependency/bundle dikembalikan sebagai JSON, bukan error 500 tanpa pesan.
+- `GET /api/health?deep=1` menguji apakah modul converter benar-benar bisa dimuat.
+- UI menampilkan kode/detail error server sehingga debugging di HP lebih mudah.

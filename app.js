@@ -48,8 +48,20 @@ convertBtn.addEventListener('click', async () => {
         }
       })
     });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    const rawResponse = await response.text();
+    let data = {};
+    try {
+      data = rawResponse ? JSON.parse(rawResponse) : {};
+    } catch {
+      data = {};
+    }
+
+    if (!response.ok || !data.ok) {
+      const serverMessage = data.error || rawResponse.trim();
+      const code = data.code ? ` [${data.code}]` : '';
+      const detail = data.detail ? ` — ${data.detail}` : '';
+      throw new Error(`${serverMessage || `HTTP ${response.status}`}${code}${detail}`);
+    }
     lastXml = data.xml;
     xmlOutput.value = data.xml;
     statsEl.innerHTML = [
