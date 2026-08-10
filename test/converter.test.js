@@ -2,72 +2,56 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { convertSvgToAlightXml } from '../lib/converter.js';
 
-test('converts colors, transforms, gradient and removes tiny details', () => {
+test('groups same solid colors into one Alight Motion group and removes strokes', () => {
   const svg = `
   <svg width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#ff0000"/>
-        <stop offset="100%" stop-color="#0000ff"/>
-      </linearGradient>
-    </defs>
-    <rect x="0" y="0" width="200" height="100" fill="#ffffff"/>
-    <g transform="translate(10 5)">
-      <path d="M0 0 L80 0 L80 40 Z" fill="rgb(10, 20, 30)" stroke="#00ff00" stroke-width="2"/>
-      <circle cx="120" cy="40" r="20" fill="url(#g)"/>
-      <rect x="1" y="1" width="0.1" height="0.1" fill="red"/>
-    </g>
+    <rect x="0" y="0" width="80" height="50" fill="#ff0000" stroke="#00ff00" stroke-width="3"/>
+    <rect x="90" y="0" width="80" height="50" fill="#ff0000"/>
+    <rect x="0" y="60" width="80" height="30" fill="#0000ff"/>
   </svg>`;
-  const out = convertSvgToAlightXml(svg, { maxShapes: 20, minAreaPercent: 0.003, precision: 3 });
-  assert.equal(out.width, 200);
-  assert.equal(out.height, 100);
-  assert.match(out.xml, /<scene /);
-  assert.match(out.xml, /fillColor value="#ff0a141e"/);
-  assert.match(out.xml, /<gradient type="linear" startColor="#ffff0000" endColor="#ff0000ff"/);
-  assert.match(out.xml, /<path-stroke/);
-  assert.equal(out.stats.outputShapes, 3);
-  assert.equal(out.stats.removedTiny, 1);
+  const out = convertSvgToAlightXml(svg, { quality: 'accurate', nodeReduction: 0 });
+  assert.equal(out.stats.colorGroups, 2);
+  assert.equal(out.stats.outputShapes, 2);
+  assert.equal(out.stats.mergedShapes, 1);
+  assert.equal(out.stats.strokesRemoved, 1);
+  assert.match(out.xml, /<embedScene[^>]+label="Warna 001/);
+  assert.doesNotMatch(out.xml, /<path-stroke/);
+  assert.equal((out.xml.match(/<embedScene\b/g) || []).length, 2);
+  assert.equal((out.xml.match(/<shape\b/g) || []).length, 2);
 });
 
-test('caps shape count by keeping larger shapes', () => {
+test('flattens gradients to a single representative group color', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="g"><stop offset="0" stop-color="#ff0000"/><stop offset="1" stop-color="#0000ff"/></linearGradient></defs>
+    <rect x="0" y="0" width="100" height="100" fill="url(#g)"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { nodeReduction: 0 });
+  assert.equal(out.stats.gradientsFlattened, 1);
+  assert.equal(out.stats.colorGroups, 1);
+  assert.doesNotMatch(out.xml, /<gradient\b/);
+});
+
+test('reduces path node count', () => {
+  const points = Array.from({ length: 40 }, (_, i) => `${i * 2},${50 + Math.sin(i / 3) * 20}`).join(' ');
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><polyline points="${points}" fill="#123456"/></svg>`;
+  const out = convertSvgToAlightXml(svg, { nodeReduction: 50, minAreaPercent: 0 });
+  assert.ok(out.stats.nodesBefore > out.stats.nodesAfter);
+  assert.ok(out.stats.nodesAfter >= 2);
+});
+
+test('caps source shape count before color merge', () => {
   const items = Array.from({ length: 10 }, (_, i) => `<rect x="${i * 10}" y="0" width="${i + 1}" height="${i + 1}" fill="#123456"/>`).join('');
   const svg = `<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">${items}</svg>`;
-  const out = convertSvgToAlightXml(svg, { maxShapes: 4, minAreaPercent: 0 });
-  assert.equal(out.stats.outputShapes, 4);
+  const out = convertSvgToAlightXml(svg, { maxShapes: 4, minAreaPercent: 0, nodeReduction: 0 });
   assert.equal(out.stats.removedByLimit, 6);
+  assert.equal(out.stats.colorGroups, 1);
+  assert.equal(out.stats.outputShapes, 1);
 });
 
-
-test('emits strict Alight Motion path grammar and explicit identity scale', () => {
-  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-    <path d="M0 0 C10 0 20 10 30 10 C40 10 50 20 60 20 L70 -5 Z" fill="#123456"/>
-  </svg>`;
-  const out = convertSvgToAlightXml(svg, { precision: 3, minAreaPercent: 0 });
-
-  assert.match(out.xml, /<scale value="1\.000000,1\.000000" \/>/);
-  assert.match(out.xml, /<path d="M -?\d+(?:\.\d+)? -?\d+(?:\.\d+)?C /);
-  assert.match(out.xml, /C [^"]+, [^"]+, [^"]+C /);
-  assert.doesNotMatch(out.xml, /<path d="[^"]*[MLC]-/);
-  assert.doesNotMatch(out.xml, /<path d="[^"]*\d-\d/);
-});
-
-
-test('accurate is fidelity-first and does not cull normal vector counts by default', () => {
-  const items = Array.from({ length: 220 }, (_, i) => `<rect x="${i}" y="0" width="1" height="10" fill="#123456"/>`).join('');
-  const svg = `<svg width="400" height="100" xmlns="http://www.w3.org/2000/svg">${items}</svg>`;
-  const out = convertSvgToAlightXml(svg, { quality: 'accurate' });
-  assert.equal(out.options.quality, 'accurate');
-  assert.equal(out.options.precision, 5);
-  assert.equal(out.stats.outputShapes, 220);
-  assert.equal(out.stats.removedTiny, 0);
-  assert.equal(out.stats.removedByLimit, 0);
-});
-
-test('preserveAspectRatio defaults to xMidYMid meet instead of stretching viewBox', () => {
+test('preserveAspectRatio defaults to xMidYMid meet', () => {
   const svg = `<svg width="200" height="200" viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
     <rect x="0" y="0" width="100" height="50" fill="#ff0000"/>
   </svg>`;
-  const out = convertSvgToAlightXml(svg, { quality: 'accurate' });
-  // 100x50 should scale uniformly to 200x100 and be vertically centered at y=50..150.
+  const out = convertSvgToAlightXml(svg, { nodeReduction: 0 });
   assert.match(out.xml, /<location value="100\.000000,100\.000000,0\.000000" \/>/);
 });

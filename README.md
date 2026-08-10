@@ -1,15 +1,16 @@
 # SVG → Alight Motion XML
 
-Tool ringan untuk mengubah SVG menjadi XML scene Alight Motion. Struktur output mengikuti pola XML referensi Alight Motion 5.0.273: `<scene>`, `<shape>`, `<transform>`, `<fillColor>`, `<gradient>`, `<path-stroke>`, dan `<path>`.
+Tool ringan untuk mengubah SVG menjadi XML scene Alight Motion. v1.4 memakai struktur `<scene>` + `<embedScene>` color groups + `<shape>` + `<transform>` + `<fillColor>` + `<path>`. Output sengaja tidak menulis `<path-stroke>`.
 
 ## Fokus converter
 
 - Warna SVG dikonversi ke format Alight Motion `#AARRGGBB`.
-- Mendukung path, rect, circle, ellipse, line, polygon, polyline, group transform, `<use>`, CSS sederhana, fill, stroke, linear gradient, dan radial gradient.
-- Arc diubah menjadi cubic Bézier agar path lebih dekat ke pola XML Alight Motion.
-- Mode default `accurate` tidak membuang detail kecil dan memberi batas shape jauh lebih tinggi.
-- Mode `balanced` / `lightweight` tersedia bila pengguna memang ingin mengurangi layer.
-- Koordinat path dilokalkan ke pusat shape, sedangkan posisi disimpan pada `<transform><location>` agar angka path tidak terlalu besar.
+- Mendukung path, rect, circle, ellipse, line, polygon, polyline, group transform, `<use>` dan CSS sederhana.
+- Semua fill dengan warna ARGB identik digabung menjadi satu color group.
+- Stroke sengaja dibuang; stroke-only element dilewati.
+- Gradient diratakan menjadi satu warna representatif agar satu group hanya memiliki satu warna.
+- Arc diubah menjadi cubic Bézier. Node contour kompleks dikurangi secara adaptif dengan perlindungan primitive dan sudut tajam.
+- Mode `accurate`, `balanced`, dan `lightweight` mengontrol tingkat pengurangan node tanpa mengubah prinsip 1 warna = 1 group.
 
 ## Jalankan lokal
 
@@ -175,3 +176,17 @@ curl -X POST 'https://DOMAIN.vercel.app/api/v1/convert' \
 `quality` dapat berupa `accurate`, `balanced`, atau `lightweight`.
 
 > Catatan fidelity: `clipPath`, mask, filter kompleks, text/font eksternal, dan gradient >2 stop masih tidak selalu dapat dipetakan 1:1 ke format XML Alight Motion yang sudah tervalidasi. Engine memberi warning bila menemukan fitur tersebut.
+
+## v1.4.0 — Color Groups + node reduction
+
+Output Alight Motion sekarang diubah mengikuti workflow editing yang lebih praktis:
+
+- **1 warna solid = 1 `embedScene` group**;
+- semua path dengan warna ARGB yang sama digabung menjadi **1 vector path** di dalam group tersebut;
+- **stroke tidak ditulis** ke XML; elemen stroke-only dilewati;
+- gradient diratakan menjadi satu warna midpoint agar satu group tidak mencampur paint;
+- node pada contour kompleks dikurangi secara adaptif, tetapi primitive/path sederhana dan sudut tajam dilindungi;
+- default Accurate mengurangi sekitar 35% anchor yang aman, Balanced 50%, Lightweight 65%;
+- statistik API mengembalikan `colorGroups`, `mergedShapes`, `nodesBefore`, `nodesAfter`, `strokesRemoved`, dan `gradientsFlattened`.
+
+Catatan penting: grouping global per warna dapat mengubah urutan tumpukan bila warna yang sama tersebar di beberapa posisi z-order. Engine mengurutkan group berdasarkan rata-rata posisi sumber untuk meminimalkan perubahan tersebut. Jika fidelity z-order absolut lebih penting daripada satu-group-per-warna, gunakan strategi grouping per-run pada versi lanjutan.

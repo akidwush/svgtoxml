@@ -14,9 +14,9 @@ let lastXml = '';
 let lastBaseName = 'alight-motion';
 
 const PRESETS = {
-  accurate: { maxShapes: 2500, minAreaPercent: 0, precision: 5 },
-  balanced: { maxShapes: 700, minAreaPercent: 0.001, precision: 4 },
-  lightweight: { maxShapes: 180, minAreaPercent: 0.003, precision: 3 }
+  accurate: { maxShapes: 5000, minAreaPercent: 0, precision: 5, nodeReduction: 35 },
+  balanced: { maxShapes: 2500, minAreaPercent: 0.0002, precision: 4, nodeReduction: 50 },
+  lightweight: { maxShapes: 1000, minAreaPercent: 0.001, precision: 3, nodeReduction: 65 }
 };
 
 function applyPreset(name) {
@@ -24,6 +24,7 @@ function applyPreset(name) {
   $('maxShapes').value = p.maxShapes;
   $('minArea').value = p.minAreaPercent;
   $('precision').value = p.precision;
+  $('nodeReduction').value = p.nodeReduction;
 }
 
 quality.addEventListener('change', () => applyPreset(quality.value));
@@ -69,7 +70,10 @@ convertBtn.addEventListener('click', async () => {
           quality: quality.value,
           maxShapes: Number($('maxShapes').value),
           minAreaPercent: Number($('minArea').value),
-          precision: Number($('precision').value)
+          precision: Number($('precision').value),
+          nodeReduction: Number($('nodeReduction').value),
+          groupByColor: true,
+          removeStrokes: true
         }
       })
     });
@@ -88,17 +92,17 @@ convertBtn.addEventListener('click', async () => {
     xmlOutput.value = data.xml;
     const removed = (data.stats.removedTiny || 0) + (data.stats.removedByLimit || 0);
     statsEl.innerHTML = [
-      stat('Shape output', data.stats.outputShapes),
-      stat('Shape dibuang', removed),
-      stat('Gradient', data.stats.gradients),
+      stat('Group warna', data.stats.colorGroups ?? data.stats.outputShapes),
+      stat('Shape digabung', data.stats.mergedShapes ?? 0),
+      stat('Node', `${data.stats.nodesBefore ?? 0} → ${data.stats.nodesAfter ?? 0}`),
+      stat('Stroke dihapus', data.stats.strokesRemoved ?? 0),
       stat('Ukuran XML', `${(data.stats.outputBytes / 1024).toFixed(1)} KB`)
     ].join('');
     warningsEl.innerHTML = (data.warnings || []).map((w) => `⚠ ${w}`).join('<br>');
-    $('resultTitle').textContent = `${data.width}×${data.height} · ${data.stats.outputShapes} shape · ${data.profile?.quality || quality.value}`;
+    $('resultTitle').textContent = `${data.width}×${data.height} · ${data.stats.colorGroups ?? data.stats.outputShapes} group warna · ${data.profile?.quality || quality.value}`;
     resultCard.classList.remove('hidden');
-    status.textContent = removed
-      ? `Selesai, tetapi ${removed} shape dibuang oleh pengaturan saat ini.`
-      : 'Selesai tanpa membuang shape karena filter/limit.';
+    const reduced = Math.max(0, (data.stats.nodesBefore || 0) - (data.stats.nodesAfter || 0));
+    status.textContent = `Selesai · ${data.stats.colorGroups ?? data.stats.outputShapes} group warna · ${reduced} node dikurangi · stroke dihapus.`;
   } catch (err) {
     status.textContent = `Gagal: ${err.message}`;
   } finally {
