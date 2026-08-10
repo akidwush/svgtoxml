@@ -37,6 +37,21 @@ function suppliedApiKey(request) {
   return /^Bearer\s+/i.test(auth) ? auth.replace(/^Bearer\s+/i, '').trim() : '';
 }
 
+
+function isSameOriginRequest(request) {
+  try {
+    const targetHost = new URL(request.url).host;
+    const secFetchSite = (request.headers.get('sec-fetch-site') || '').toLowerCase();
+    if (secFetchSite === 'same-origin') return true;
+    const origin = request.headers.get('origin');
+    if (origin && new URL(origin).host === targetHost) return true;
+    const referer = request.headers.get('referer');
+    if (referer && new URL(referer).host === targetHost) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 function secureEqual(a, b) {
   const ah = crypto.createHash('sha256').update(String(a)).digest();
   const bh = crypto.createHash('sha256').update(String(b)).digest();
@@ -54,7 +69,9 @@ async function handleRequest(request) {
     }
 
     const expectedKey = process.env.SVG2XML_API_KEY || '';
-    if (expectedKey && !secureEqual(suppliedApiKey(request), expectedKey)) {
+    // Frontend resmi memakai endpoint same-origin tanpa pernah mengekspos secret ke browser.
+    // Request eksternal (curl / website lain) wajib memakai x-api-key bila secret diaktifkan.
+    if (expectedKey && !isSameOriginRequest(request) && !secureEqual(suppliedApiKey(request), expectedKey)) {
       return jsonResponse(request, { ok: false, error: 'API key tidak valid.', code: 'INVALID_API_KEY' }, 401);
     }
 
@@ -129,7 +146,7 @@ async function handleRequest(request) {
       });
     }
 
-    return jsonResponse(request, { ok: true, ...result });
+    return jsonResponse(request, { ok: true, apiVersion: 'v1', ...result });
   } catch (error) {
     console.error('[svg2xml] unhandled API error:', error);
     return jsonResponse(request, {

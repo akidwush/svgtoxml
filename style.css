@@ -61,3 +61,11 @@ textarea { min-height:260px; margin-top:10px; resize:vertical; font-family: ui-m
   button.secondary { color:#18181b; background:#f4f4f5; border-color:#d4d4d8; }
   .compact code { color:#27272a; }
 }
+.file-meta { opacity:.8; font-size:11px; }
+.single-top { grid-template-columns:1fr; margin-bottom:10px; }
+.advanced { margin:8px 0 16px; border:1px solid #27272a; border-radius:14px; padding:12px; }
+.advanced > summary { font-weight:750; }
+.advanced .grid { margin-bottom:0; }
+@media (prefers-color-scheme: light) {
+  .advanced { border-color:#e4e4e7; }
+}

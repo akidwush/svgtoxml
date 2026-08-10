@@ -50,3 +50,24 @@ test('emits strict Alight Motion path grammar and explicit identity scale', () =
   assert.doesNotMatch(out.xml, /<path d="[^"]*[MLC]-/);
   assert.doesNotMatch(out.xml, /<path d="[^"]*\d-\d/);
 });
+
+
+test('accurate is fidelity-first and does not cull normal vector counts by default', () => {
+  const items = Array.from({ length: 220 }, (_, i) => `<rect x="${i}" y="0" width="1" height="10" fill="#123456"/>`).join('');
+  const svg = `<svg width="400" height="100" xmlns="http://www.w3.org/2000/svg">${items}</svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'accurate' });
+  assert.equal(out.options.quality, 'accurate');
+  assert.equal(out.options.precision, 5);
+  assert.equal(out.stats.outputShapes, 220);
+  assert.equal(out.stats.removedTiny, 0);
+  assert.equal(out.stats.removedByLimit, 0);
+});
+
+test('preserveAspectRatio defaults to xMidYMid meet instead of stretching viewBox', () => {
+  const svg = `<svg width="200" height="200" viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="100" height="50" fill="#ff0000"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'accurate' });
+  // 100x50 should scale uniformly to 200x100 and be vertically centered at y=50..150.
+  assert.match(out.xml, /<location value="100\.000000,100\.000000,0\.000000" \/>/);
+});

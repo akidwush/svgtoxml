@@ -10,41 +10,52 @@
 <body>
   <main class="shell">
     <header>
-      <p class="eyebrow">SVG → XML</p>
+      <p class="eyebrow">SVG → XML · FIDELITY FIRST</p>
       <h1>Alight Motion Converter</h1>
-      <p class="sub">Konversi SVG menjadi scene XML yang mengikuti struktur Alight Motion, sambil membuang detail sangat kecil agar layer tidak berlebihan.</p>
+      <p class="sub">Konversi SVG ke XML Alight Motion dengan prioritas utama menjaga geometri, urutan layer, warna, transform dan detail visual.</p>
     </header>
 
     <section class="card">
       <label class="upload" for="svgFile">
         <span>Pilih file SVG</span>
         <small id="fileName">Belum ada file</small>
+        <small id="fileMeta" class="file-meta"></small>
         <input id="svgFile" type="file" accept="image/svg+xml,.svg" />
       </label>
 
-      <div class="grid">
+      <div class="grid single-top">
         <label>
-          <span>API key <small>(opsional)</small></span>
-          <input id="apiKey" type="password" autocomplete="off" placeholder="x-api-key" />
-        </label>
-        <label>
-          <span>Maks. shape/layer</span>
-          <input id="maxShapes" type="number" min="1" max="1000" value="180" />
-        </label>
-        <label>
-          <span>Buang detail di bawah (%)</span>
-          <input id="minArea" type="number" min="0" max="5" step="0.001" value="0.003" />
-        </label>
-        <label>
-          <span>Presisi koordinat</span>
-          <select id="precision">
-            <option value="2">2 desimal</option>
-            <option value="3" selected>3 desimal</option>
-            <option value="4">4 desimal</option>
-            <option value="5">5 desimal</option>
+          <span>Mode kualitas</span>
+          <select id="quality">
+            <option value="accurate" selected>Accurate — pertahankan detail maksimum</option>
+            <option value="balanced">Balanced — detail tinggi, layer lebih ringan</option>
+            <option value="lightweight">Lightweight — prioritaskan jumlah layer</option>
           </select>
         </label>
       </div>
+
+      <details class="advanced">
+        <summary>Pengaturan lanjutan</summary>
+        <div class="grid">
+          <label>
+            <span>Maks. shape/layer</span>
+            <input id="maxShapes" type="number" min="1" max="5000" value="2500" />
+          </label>
+          <label>
+            <span>Buang detail di bawah (%)</span>
+            <input id="minArea" type="number" min="0" max="5" step="0.0001" value="0" />
+          </label>
+          <label>
+            <span>Presisi koordinat</span>
+            <select id="precision">
+              <option value="3">3 desimal</option>
+              <option value="4">4 desimal</option>
+              <option value="5" selected>5 desimal</option>
+              <option value="6">6 desimal</option>
+            </select>
+          </label>
+        </div>
+      </details>
 
       <button id="convertBtn" type="button">Konversi ke XML</button>
       <p id="status" class="status" aria-live="polite"></p>
@@ -67,10 +78,11 @@
     </section>
 
     <section class="card compact">
-      <p class="eyebrow">API</p>
-      <code>POST /api/convert</code>
-      <p class="mini">Body JSON: <code>{ "svg": "&lt;svg...&gt;", "options": { "maxShapes": 180 } }</code>. Jika <code>SVG2XML_API_KEY</code> di Vercel diisi, kirim header <code>x-api-key</code>.</p>
-      <code>GET /api/health</code>
+      <p class="eyebrow">ENGINE API v1</p>
+      <code>POST /api/v1/convert</code>
+      <p class="mini">Website ini memakai engine API secara internal tanpa menampilkan API key. Aplikasi atau website pihak ketiga dapat memakai endpoint yang sama dengan header <code>x-api-key</code> bila proteksi API diaktifkan di Vercel.</p>
+      <code>{ "svg": "&lt;svg...&gt;", "options": { "quality": "accurate" } }</code>
+      <p class="mini"><code>GET /api/health?deep=1</code></p>
     </section>
   </main>
   <script type="module" src="/app.js"></script>
