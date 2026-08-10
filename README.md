@@ -133,3 +133,14 @@ Script akan `npm install`, menjalankan syntax check + test, commit, lalu push ke
 - Converter di-load dengan dynamic import agar error dependency/bundle dikembalikan sebagai JSON, bukan error 500 tanpa pesan.
 - `GET /api/health?deep=1` menguji apakah modul converter benar-benar bisa dimuat.
 - UI menampilkan kode/detail error server sehingga debugging di HP lebih mudah.
+
+## v1.2.0 - Alight Motion strict compatibility
+
+Versi ini memperketat output XML agar mengikuti bentuk yang terlihat pada XML ekspor Alight Motion:
+
+- setiap path memakai command eksplisit `M`, `L`, `C`, `Z` per segmen;
+- ada spasi setelah command dan koma antar pasangan control-point cubic;
+- tidak memakai compact SVG number adjacency seperti `M-5-10` atau `C1-2...`;
+- setiap shape path menulis identity scale `<scale value="1.000000,1.000000" />` secara eksplisit.
+
+Perubahan ini dibuat karena sintaks compact yang legal untuk SVG belum tentu diterima oleh parser import XML Alight Motion.

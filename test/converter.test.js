@@ -36,3 +36,17 @@ test('caps shape count by keeping larger shapes', () => {
   assert.equal(out.stats.outputShapes, 4);
   assert.equal(out.stats.removedByLimit, 6);
 });
+
+
+test('emits strict Alight Motion path grammar and explicit identity scale', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0 C10 0 20 10 30 10 C40 10 50 20 60 20 L70 -5 Z" fill="#123456"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { precision: 3, minAreaPercent: 0 });
+
+  assert.match(out.xml, /<scale value="1\.000000,1\.000000" \/>/);
+  assert.match(out.xml, /<path d="M -?\d+(?:\.\d+)? -?\d+(?:\.\d+)?C /);
+  assert.match(out.xml, /C [^"]+, [^"]+, [^"]+C /);
+  assert.doesNotMatch(out.xml, /<path d="[^"]*[MLC]-/);
+  assert.doesNotMatch(out.xml, /<path d="[^"]*\d-\d/);
+});
