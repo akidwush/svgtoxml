@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <title>SVG → Alight Motion XML</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <p class="eyebrow">SVG → XML</p>
+      <h1>Alight Motion Converter</h1>
+      <p class="sub">Konversi SVG menjadi scene XML yang mengikuti struktur Alight Motion, sambil membuang detail sangat kecil agar layer tidak berlebihan.</p>
+    </header>
+
+    <section class="card">
+      <label class="upload" for="svgFile">
+        <span>Pilih file SVG</span>
+        <small id="fileName">Belum ada file</small>
+        <input id="svgFile" type="file" accept="image/svg+xml,.svg" />
+      </label>
+
+      <div class="grid">
+        <label>
+          <span>API key <small>(opsional)</small></span>
+          <input id="apiKey" type="password" autocomplete="off" placeholder="x-api-key" />
+        </label>
+        <label>
+          <span>Maks. shape/layer</span>
+          <input id="maxShapes" type="number" min="1" max="1000" value="180" />
+        </label>
+        <label>
+          <span>Buang detail di bawah (%)</span>
+          <input id="minArea" type="number" min="0" max="5" step="0.001" value="0.003" />
+        </label>
+        <label>
+          <span>Presisi koordinat</span>
+          <select id="precision">
+            <option value="2">2 desimal</option>
+            <option value="3" selected>3 desimal</option>
+            <option value="4">4 desimal</option>
+            <option value="5">5 desimal</option>
+          </select>
+        </label>
+      </div>
+
+      <button id="convertBtn" type="button">Konversi ke XML</button>
+      <p id="status" class="status" aria-live="polite"></p>
+    </section>
+
+    <section id="resultCard" class="card hidden">
+      <div class="result-head">
+        <div>
+          <p class="eyebrow">HASIL</p>
+          <h2 id="resultTitle">Selesai</h2>
+        </div>
+        <button id="downloadBtn" class="secondary" type="button">Download XML</button>
+      </div>
+      <div id="stats" class="stats"></div>
+      <div id="warnings" class="warnings"></div>
+      <details>
+        <summary>Lihat XML</summary>
+        <textarea id="xmlOutput" readonly spellcheck="false"></textarea>
+      </details>
+    </section>
+
+    <section class="card compact">
+      <p class="eyebrow">API</p>
+      <code>POST /api/convert</code>
+      <p class="mini">Body JSON: <code>{ "svg": "&lt;svg...&gt;", "options": { "maxShapes": 180 } }</code>. Jika <code>SVG2XML_API_KEY</code> di Vercel diisi, kirim header <code>x-api-key</code>.</p>
+      <code>GET /api/health</code>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

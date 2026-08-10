@@ -1,0 +1,20 @@
+{
+  "name": "svg2xml-alight",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SVG to Alight Motion XML converter optimized for low layer count and color fidelity.",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check api/convert.js && node --check lib/converter.js && node --check app.js"
+  },
+  "dependencies": {
+    "cheerio": "1.2.0",
+    "color-name": "2.1.1",
+    "svg-path-bounds": "1.0.2",
+    "svgpath": "2.6.0"
+  },
+  "engines": {
+    "node": ">=20.18.1"
+  }
+}
