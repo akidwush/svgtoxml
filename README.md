@@ -190,3 +190,74 @@ Output Alight Motion sekarang diubah mengikuti workflow editing yang lebih prakt
 - statistik API mengembalikan `colorGroups`, `mergedShapes`, `nodesBefore`, `nodesAfter`, `strokesRemoved`, dan `gradientsFlattened`.
 
 Catatan penting: grouping global per warna dapat mengubah urutan tumpukan bila warna yang sama tersebar di beberapa posisi z-order. Engine mengurutkan group berdasarkan rata-rata posisi sumber untuk meminimalkan perubahan tersebut. Jika fidelity z-order absolut lebih penting daripada satu-group-per-warna, gunakan strategi grouping per-run pada versi lanjutan.
+
+## v1.5.0 — Lossless / 100% Akurat
+
+Mode baru `quality: "lossless"` ditambahkan tanpa mengubah behavior tiga mode grouped lama.
+
+Lossless memaksa:
+
+- `nodeReduction = 0`
+- `minAreaPercent = 0`
+- source shape limit = unlimited
+- precision output = 8 desimal
+- grouping by color = OFF
+- z-order = urutan SVG asli
+- native Alight Motion `<path-stroke>` = ON
+- 2-stop linear/radial gradient = dipertahankan
+- bbox validation = ON secara default
+
+Path dinormalisasi lewat helper `lib/path-geometry.js`. `S/T` di-expand terlebih dahulu,
+`Q` dikonversi secara eksak menjadi cubic Bézier, dan `A` diubah menggunakan standard
+elliptical-arc to cubic decomposition dari `svgpath.unarc()`.
+
+### API
+
+```json
+{
+  "svg": "<svg>...</svg>",
+  "options": {
+    "quality": "lossless",
+    "validateBounds": true
+  }
+}
+```
+
+Response lossless memiliki `validation`:
+
+```json
+{
+  "enabled": true,
+  "sourceDrawable": 10,
+  "emittedShapes": 10,
+  "missingShapes": 0,
+  "bboxMismatches": 0,
+  "details": []
+}
+```
+
+### Batas fitur yang dilaporkan eksplisit
+
+XML referensi yang tersedia membuktikan native path fill, 2-color gradient, dan
+`path-stroke` (color/size/join). Mapping 1:1 untuk SVG `clip-path`, `mask`, filter kompleks,
+`stroke-dasharray`, dan stroke line-cap belum terbukti. Lossless tidak silent-drop fitur
+tersebut: warning dikembalikan melalui API/UI.
+
+Untuk `fill-rule="evenodd"`, engine mengubah winding subpath tertutup menjadi alternating
+winding sehingga visual lubang sederhana tetap sesuai pada renderer nonzero tanpa mengubah
+kurva Bézier. Self-intersection ekstrem tetap perlu verifikasi manual.
+
+
+## v1.5.1 — Test reliability hotfix
+
+- Tidak mengubah engine konversi atau behavior mode Accurate/Balanced/Lightweight/Lossless.
+- Memperbaiki fixture unit test node reduction: sekarang memakai contour over-sampled yang benar-benar reducible.
+- Fixture sine lama dapat berhenti di anchor yang sengaja dilindungi oleh corner-preservation (`angle < 135°`), sehingga assertion `nodesBefore > nodesAfter` tidak selalu valid.
+
+
+## v1.5.2 — Android file-read reliability
+
+- SVG dibaca sekali segera setelah file picker selesai, lalu source disimpan di memori browser.
+- Tombol Convert tidak lagi memanggil `File.text()` pada reference Android yang bisa kedaluwarsa/revoked.
+- Pesan error file permission sekarang meminta pilih ulang file secara eksplisit.
+- Mode default UI diubah ke Lossless; tiga mode lama tetap tersedia dan behavior engine-nya tidak berubah.

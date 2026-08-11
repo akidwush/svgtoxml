@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300" viewBox="0 0 600 300">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0" stop-color="#ff5a5f"/>
+      <stop offset="1" stop-color="#4d7cff"/>
+    </linearGradient>
+  </defs>
+  <!-- Arc -->
+  <path id="arc" d="M40 130 A90 70 25 0 1 220 130" fill="none" stroke="#111111" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Even-odd donut: both rings intentionally have the same input winding -->
+  <path id="donut" fill="#00b894" fill-rule="evenodd" d="M280 40 L430 40 L430 190 L280 190 Z M320 80 L390 80 L390 150 L320 150 Z"/>
+  <!-- Quadratic + shorthand + two-stop gradient -->
+  <path id="curve" fill="url(#grad)" stroke="#222222" stroke-width="3" d="M460 210 Q500 80 540 210 T590 210"/>
+</svg>

@@ -12,8 +12,12 @@ const downloadBtn = $('downloadBtn');
 const quality = $('quality');
 let lastXml = '';
 let lastBaseName = 'alight-motion';
+let selectedSvgText = '';
+let selectedFileSignature = '';
+let fileReadPromise = null;
 
 const PRESETS = {
+  lossless: { maxShapes: 5000, minAreaPercent: 0, precision: 8, nodeReduction: 0 },
   accurate: { maxShapes: 5000, minAreaPercent: 0, precision: 5, nodeReduction: 35 },
   balanced: { maxShapes: 2500, minAreaPercent: 0.0002, precision: 4, nodeReduction: 50 },
   lightweight: { maxShapes: 1000, minAreaPercent: 0.001, precision: 3, nodeReduction: 65 }
@@ -21,28 +25,87 @@ const PRESETS = {
 
 function applyPreset(name) {
   const p = PRESETS[name] || PRESETS.accurate;
+  const isLossless = name === 'lossless';
   $('maxShapes').value = p.maxShapes;
   $('minArea').value = p.minAreaPercent;
   $('precision').value = p.precision;
   $('nodeReduction').value = p.nodeReduction;
+  for (const id of ['maxShapes', 'minArea', 'precision', 'nodeReduction']) $(id).disabled = isLossless;
+  const note = $('losslessNote');
+  if (note) note.classList.toggle('hidden', !isLossless);
 }
 
 quality.addEventListener('change', () => applyPreset(quality.value));
-applyPreset('accurate');
+applyPreset(quality.value);
 
-fileInput.addEventListener('change', async () => {
+function fileSignature(file) {
+  if (!file) return '';
+  return `${file.name}:${file.size}:${file.lastModified}`;
+}
+
+function readFileAsText(file) {
+  if (!file) return Promise.reject(new Error('File SVG tidak tersedia.'));
+  // Android/Chrome can revoke the underlying file reference after the picker
+  // closes. Read it immediately and keep the SVG source in memory instead of
+  // calling file.text() again when the user presses Convert.
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('File SVG tidak dapat dibaca.'));
+    reader.onabort = () => reject(new Error('Pembacaan file SVG dibatalkan.'));
+    reader.readAsText(file);
+  });
+}
+
+function analyzeSvgText(text) {
+  const paths = (text.match(/<path\b/gi) || []).length;
+  const gradients = (text.match(/<(?:linearGradient|radialGradient)\b/gi) || []).length;
+  const clips = (text.match(/<(?:clipPath|mask)\b/gi) || []).length;
+  return `${paths} path · ${gradients} gradient · ${clips} clip/mask`;
+}
+
+fileInput.addEventListener('change', () => {
   const f = fileInput.files?.[0];
   fileName.textContent = f ? `${f.name} · ${(f.size / 1024).toFixed(1)} KB` : 'Belum ada file';
   fileMeta.textContent = '';
-  if (!f) return;
+  selectedSvgText = '';
+  selectedFileSignature = '';
+  fileReadPromise = null;
+  lastXml = '';
+  resultCard.classList.add('hidden');
+
+  if (!f) {
+    status.textContent = '';
+    return;
+  }
+
   lastBaseName = f.name.replace(/\.svg$/i, '') || 'alight-motion';
-  try {
-    const text = await f.text();
-    const paths = (text.match(/<path\b/gi) || []).length;
-    const gradients = (text.match(/<(?:linearGradient|radialGradient)\b/gi) || []).length;
-    const clips = (text.match(/<(?:clipPath|mask)\b/gi) || []).length;
-    fileMeta.textContent = `${paths} path · ${gradients} gradient · ${clips} clip/mask`;
-  } catch {}
+  const signature = fileSignature(f);
+  convertBtn.disabled = true;
+  fileMeta.textContent = 'Membaca SVG…';
+  status.textContent = 'Menyiapkan file SVG…';
+
+  fileReadPromise = readFileAsText(f)
+    .then((text) => {
+      if (!text.trim().startsWith('<') || !/<svg\b/i.test(text)) {
+        throw new Error('Isi file tidak terlihat seperti SVG yang valid.');
+      }
+      selectedSvgText = text;
+      selectedFileSignature = signature;
+      fileMeta.textContent = analyzeSvgText(text);
+      status.textContent = 'SVG siap dikonversi.';
+      return text;
+    })
+    .catch((err) => {
+      selectedSvgText = '';
+      selectedFileSignature = '';
+      fileMeta.textContent = 'File gagal dibaca';
+      status.textContent = `Gagal membaca SVG: ${err.message}. Pilih ulang file SVG.`;
+      throw err;
+    })
+    .finally(() => {
+      convertBtn.disabled = false;
+    });
 });
 
 function stat(label, value) {
@@ -50,16 +113,31 @@ function stat(label, value) {
 }
 
 convertBtn.addEventListener('click', async () => {
-  const file = fileInput.files?.[0];
-  if (!file) {
-    status.textContent = 'Pilih SVG terlebih dahulu.';
-    return;
-  }
   convertBtn.disabled = true;
   status.textContent = `Mengonversi dengan mode ${quality.options[quality.selectedIndex].text}…`;
   resultCard.classList.add('hidden');
   try {
-    const svg = await file.text();
+    const file = fileInput.files?.[0];
+    const signature = fileSignature(file);
+
+    // Prefer the source cached immediately after file selection. This avoids
+    // Android's NotReadableError caused by re-reading a stale File reference.
+    if (fileReadPromise && !selectedSvgText) {
+      try { await fileReadPromise; } catch {}
+    }
+
+    if (!selectedSvgText || (signature && selectedFileSignature && signature !== selectedFileSignature)) {
+      if (!file) throw new Error('Pilih SVG terlebih dahulu.');
+      const text = await readFileAsText(file);
+      selectedSvgText = text;
+      selectedFileSignature = signature;
+    }
+
+    const svg = selectedSvgText;
+    if (!svg) {
+      throw new Error('SVG belum tersimpan di memori. Pilih ulang file SVG lalu coba lagi.');
+    }
+
     const response = await fetch('/api/v1/convert', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -72,8 +150,9 @@ convertBtn.addEventListener('click', async () => {
           minAreaPercent: Number($('minArea').value),
           precision: Number($('precision').value),
           nodeReduction: Number($('nodeReduction').value),
-          groupByColor: true,
-          removeStrokes: true
+          groupByColor: quality.value !== 'lossless',
+          removeStrokes: quality.value !== 'lossless',
+          validateBounds: quality.value === 'lossless'
         }
       })
     });
@@ -90,8 +169,14 @@ convertBtn.addEventListener('click', async () => {
 
     lastXml = data.xml;
     xmlOutput.value = data.xml;
-    const removed = (data.stats.removedTiny || 0) + (data.stats.removedByLimit || 0);
-    statsEl.innerHTML = [
+    const isLossless = data.profile?.quality === 'lossless';
+    statsEl.innerHTML = isLossless ? [
+      stat('Shape output', data.stats.outputShapes ?? 0),
+      stat('Node', `${data.stats.nodesBefore ?? 0} → ${data.stats.nodesAfter ?? 0}`),
+      stat('Stroke native', data.stats.strokes ?? 0),
+      stat('BBox mismatch', data.stats.bboxMismatches ?? 0),
+      stat('Ukuran XML', `${(data.stats.outputBytes / 1024).toFixed(1)} KB`)
+    ].join('') : [
       stat('Group warna', data.stats.colorGroups ?? data.stats.outputShapes),
       stat('Shape digabung', data.stats.mergedShapes ?? 0),
       stat('Node', `${data.stats.nodesBefore ?? 0} → ${data.stats.nodesAfter ?? 0}`),
@@ -99,10 +184,16 @@ convertBtn.addEventListener('click', async () => {
       stat('Ukuran XML', `${(data.stats.outputBytes / 1024).toFixed(1)} KB`)
     ].join('');
     warningsEl.innerHTML = (data.warnings || []).map((w) => `⚠ ${w}`).join('<br>');
-    $('resultTitle').textContent = `${data.width}×${data.height} · ${data.stats.colorGroups ?? data.stats.outputShapes} group warna · ${data.profile?.quality || quality.value}`;
+    $('resultTitle').textContent = isLossless
+      ? `${data.width}×${data.height} · ${data.stats.outputShapes} shape · Lossless`
+      : `${data.width}×${data.height} · ${data.stats.colorGroups ?? data.stats.outputShapes} group warna · ${data.profile?.quality || quality.value}`;
     resultCard.classList.remove('hidden');
-    const reduced = Math.max(0, (data.stats.nodesBefore || 0) - (data.stats.nodesAfter || 0));
-    status.textContent = `Selesai · ${data.stats.colorGroups ?? data.stats.outputShapes} group warna · ${reduced} node dikurangi · stroke dihapus.`;
+    if (isLossless) {
+      status.textContent = `Selesai · ${data.stats.outputShapes} shape · node 0% reduction · stroke dipertahankan · z-order asli.`;
+    } else {
+      const reduced = Math.max(0, (data.stats.nodesBefore || 0) - (data.stats.nodesAfter || 0));
+      status.textContent = `Selesai · ${data.stats.colorGroups ?? data.stats.outputShapes} group warna · ${reduced} node dikurangi · stroke dihapus.`;
+    }
   } catch (err) {
     status.textContent = `Gagal: ${err.message}`;
   } finally {

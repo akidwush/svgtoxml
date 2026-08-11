@@ -10,9 +10,9 @@
 <body>
   <main class="shell">
     <header>
-      <p class="eyebrow">SVG → XML · COLOR GROUPS v1.4</p>
+      <p class="eyebrow">SVG → XML · LOSSLESS + COLOR GROUPS v1.5</p>
       <h1>Alight Motion Converter</h1>
-      <p class="sub">Output dibuat per warna: 1 warna = 1 group, stroke dibuang, path sewarna digabung, dan node dikurangi agar lebih ringan di Alight Motion.</p>
+      <p class="sub">Mode Lossless mempertahankan shape, z-order, node, gradient 2-stop, opacity, dan native stroke. Tiga mode Color Groups lama tetap tersedia tanpa perubahan behavior.</p>
     </header>
 
     <section class="card">
@@ -27,7 +27,8 @@
         <label>
           <span>Mode kualitas</span>
           <select id="quality">
-            <option value="accurate" selected>Accurate Grouped — node -35%</option>
+            <option value="lossless" selected>Lossless / 100% Akurat — node 0%</option>
+            <option value="accurate">Accurate Grouped — node -35%</option>
             <option value="balanced">Balanced Grouped — node -50%</option>
             <option value="lightweight">Lightweight Grouped — node -65%</option>
           </select>
@@ -56,9 +57,11 @@
               <option value="4">4 desimal</option>
               <option value="5" selected>5 desimal</option>
               <option value="6">6 desimal</option>
+              <option value="8">8 desimal</option>
             </select>
           </label>
         </div>
+        <p id="losslessNote" class="mini hidden">Mode Lossless mengunci: node reduction 0%, detail threshold 0%, shape unlimited, precision 8, grouping warna OFF, stroke native ON.</p>
       </details>
 
       <button id="convertBtn" type="button">Konversi ke XML</button>
@@ -85,10 +88,10 @@
       <p class="eyebrow">ENGINE API v1</p>
       <code>POST /api/v1/convert</code>
       <p class="mini">Website ini memakai engine API secara internal tanpa menampilkan API key. Aplikasi atau website pihak ketiga dapat memakai endpoint yang sama dengan header <code>x-api-key</code> bila proteksi API diaktifkan di Vercel.</p>
-      <code>{ "svg": "&lt;svg...&gt;", "options": { "quality": "accurate", "nodeReduction": 35 } }</code>
+      <code>{ "svg": "&lt;svg...&gt;", "options": { "quality": "lossless" } }</code>
       <p class="mini"><code>GET /api/health?deep=1</code></p>
     </section>
   </main>
-  <script type="module" src="/app.js"></script>
+  <script type="module" src="/app.js?v=1.5.2"></script>
 </body>
 </html>
