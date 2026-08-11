@@ -2,42 +2,133 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="color-scheme" content="dark light" />
-  <title>SVG → Alight Motion XML</title>
-  <link rel="stylesheet" href="/style.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#080b14" />
+  <meta name="color-scheme" content="dark" />
+  <title>SVG → Alight Motion XML · Nexora</title>
+  <link rel="stylesheet" href="/style.css?v=1.7.0" />
 </head>
 <body>
   <main class="shell">
-    <header>
-      <p class="eyebrow">SVG → XML · LOSSLESS + COLOR GROUPS v1.5</p>
-      <h1>Alight Motion Converter</h1>
-      <p class="sub">Mode Lossless mempertahankan shape, z-order, node, gradient 2-stop, opacity, dan native stroke. Tiga mode Color Groups lama tetap tersedia tanpa perubahan behavior.</p>
+    <header class="hero">
+      <div class="hero-orb hero-orb-a"></div>
+      <div class="hero-orb hero-orb-b"></div>
+
+      <div class="brand-row">
+        <span class="brand-mark" aria-hidden="true">✦</span>
+        <div>
+          <p class="eyebrow">NEXORA VECTOR ENGINE · v1.7</p>
+          <p class="brand-sub">SVG → XML untuk Alight Motion</p>
+        </div>
+        <span class="api-pill">API v1</span>
+      </div>
+
+      <h1>SVG masuk.<br><span>Alight Motion keluar.</span></h1>
+      <p class="sub">
+        Converter fidelity-first dengan empat mode nyata. Lossless mempertahankan shape,
+        z-order, stroke dan node; tiga mode Grouped mengurangi node sesuai profil.
+      </p>
+
+      <div class="feature-badges" aria-label="Fitur utama">
+        <span>◆ LOSSLESS</span>
+        <span>▰ Z-ORDER</span>
+        <span>⌁ SERVER KEY</span>
+      </div>
     </header>
 
-    <section class="card">
-      <label class="upload" for="svgFile">
-        <span>Pilih file SVG</span>
-        <small id="fileName">Belum ada file</small>
-        <small id="fileMeta" class="file-meta"></small>
+    <section class="card source-card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">01 · SOURCE</p>
+          <h2>Masukkan SVG</h2>
+        </div>
+        <span id="sourceState" class="state-pill state-idle">MENUNGGU</span>
+      </div>
+
+      <label class="upload-zone" for="svgFile">
+        <div class="upload-icon" aria-hidden="true">↑</div>
+        <div class="upload-copy">
+          <strong>Pilih atau jatuhkan SVG</strong>
+          <span>Maksimal 2 MB · path, gradient, opacity, stroke</span>
+        </div>
+        <span class="upload-cta">Pilih SVG</span>
         <input id="svgFile" type="file" accept="image/svg+xml,.svg" />
       </label>
 
-      <div class="grid single-top">
-        <label>
-          <span>Mode kualitas</span>
-          <select id="quality">
-            <option value="lossless" selected>Lossless / 100% Akurat — node 0%</option>
-            <option value="accurate">Accurate Grouped — node -35%</option>
-            <option value="balanced">Balanced Grouped — node -50%</option>
-            <option value="lightweight">Lightweight Grouped — node -65%</option>
-          </select>
-        </label>
+      <article id="fileCard" class="file-card hidden" aria-live="polite">
+        <div class="svg-thumb">
+          <img id="svgPreview" alt="Preview SVG yang diupload" />
+          <div id="svgPreviewFallback" class="svg-thumb-fallback" hidden aria-hidden="true">SVG</div>
+        </div>
+        <div class="file-copy">
+          <strong id="fileName">Belum ada file</strong>
+          <span id="fileMeta" class="file-meta"></span>
+        </div>
+        <button id="removeFile" class="icon-button" type="button" aria-label="Hapus file">×</button>
+      </article>
+    </section>
+
+    <section class="card mode-card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">02 · QUALITY MODE</p>
+          <h2>Pilih strategi konversi</h2>
+        </div>
+        <span id="modeBadge" class="state-pill mode-state">LOSSLESS</span>
       </div>
 
+      <div class="mode-grid" id="modeGrid">
+        <button class="mode-option is-active" type="button" data-quality="lossless">
+          <span class="mode-icon">♛</span>
+          <span class="mode-copy">
+            <strong>Lossless / 100% Akurat</strong>
+            <small>Node 0% · z-order asli · native stroke</small>
+          </span>
+          <span class="mode-check">✓</span>
+        </button>
+
+        <button class="mode-option" type="button" data-quality="accurate">
+          <span class="mode-icon">◎</span>
+          <span class="mode-copy">
+            <strong>Accurate Grouped</strong>
+            <small>Node -35% · grouping warna presisi</small>
+          </span>
+          <span class="mode-check">✓</span>
+        </button>
+
+        <button class="mode-option" type="button" data-quality="balanced">
+          <span class="mode-icon">◈</span>
+          <span class="mode-copy">
+            <strong>Balanced Grouped</strong>
+            <small>Node -50% · seimbang detail & ukuran</small>
+          </span>
+          <span class="mode-check">✓</span>
+        </button>
+
+        <button class="mode-option" type="button" data-quality="lightweight">
+          <span class="mode-icon">⚡</span>
+          <span class="mode-copy">
+            <strong>Lightweight Grouped</strong>
+            <small>Node -65% · prioritas file ringan</small>
+          </span>
+          <span class="mode-check">✓</span>
+        </button>
+      </div>
+
+      <select id="quality" class="sr-only" aria-hidden="true" tabindex="-1">
+        <option value="lossless" selected>Lossless / 100% Akurat — node 0%</option>
+        <option value="accurate">Accurate Grouped — node -35%</option>
+        <option value="balanced">Balanced Grouped — node -50%</option>
+        <option value="lightweight">Lightweight Grouped — node -65%</option>
+      </select>
+
       <details class="advanced">
-        <summary>Pengaturan lanjutan</summary>
-        <div class="grid">
+        <summary>
+          <span>Pengaturan lanjutan</span>
+          <small id="advancedSummary">Dikunci oleh profil Lossless</small>
+        </summary>
+
+        <div class="grid advanced-grid">
           <label>
             <span>Maks. shape sumber</span>
             <input id="maxShapes" type="number" min="1" max="5000" value="5000" />
@@ -48,50 +139,65 @@
           </label>
           <label>
             <span>Kurangi node (%)</span>
-            <input id="nodeReduction" type="number" min="0" max="80" step="1" value="35" />
+            <input id="nodeReduction" type="number" min="0" max="80" step="1" value="0" />
           </label>
           <label>
             <span>Presisi koordinat</span>
             <select id="precision">
               <option value="3">3 desimal</option>
               <option value="4">4 desimal</option>
-              <option value="5" selected>5 desimal</option>
+              <option value="5">5 desimal</option>
               <option value="6">6 desimal</option>
-              <option value="8">8 desimal</option>
+              <option value="8" selected>8 desimal</option>
             </select>
           </label>
         </div>
-        <p id="losslessNote" class="mini hidden">Mode Lossless mengunci: node reduction 0%, detail threshold 0%, shape unlimited, precision 8, grouping warna OFF, stroke native ON.</p>
+
+        <p id="losslessNote" class="mini">
+          Lossless mengunci node reduction 0%, threshold 0%, shape maksimal, precision 8,
+          grouping warna OFF, stroke native ON, dan bbox validation ON.
+        </p>
       </details>
 
-      <button id="convertBtn" type="button">Konversi ke XML</button>
-      <p id="status" class="status" aria-live="polite"></p>
+      <button id="convertBtn" class="convert-button" type="button" disabled>
+        <span class="convert-icon">✣</span>
+        <span id="convertLabel">Konversi ke Alight XML</span>
+        <span aria-hidden="true">→</span>
+      </button>
+
+      <p id="status" class="status" aria-live="polite">Pilih file SVG untuk memulai.</p>
     </section>
 
-    <section id="resultCard" class="card hidden">
+    <section id="resultCard" class="card result-card hidden">
       <div class="result-head">
         <div>
-          <p class="eyebrow">HASIL</p>
+          <p class="eyebrow">03 · OUTPUT</p>
           <h2 id="resultTitle">Selesai</h2>
         </div>
         <button id="downloadBtn" class="secondary" type="button">Download XML</button>
       </div>
+
       <div id="stats" class="stats"></div>
       <div id="warnings" class="warnings"></div>
-      <details>
-        <summary>Lihat XML</summary>
+
+      <details class="xml-details">
+        <summary>Lihat source XML</summary>
         <textarea id="xmlOutput" readonly spellcheck="false"></textarea>
       </details>
     </section>
 
-    <section class="card compact">
-      <p class="eyebrow">ENGINE API v1</p>
-      <code>POST /api/v1/convert</code>
-      <p class="mini">Endpoint integrasi untuk website/app lain. API key selalu diperiksa di endpoint v1 dan dikirim lewat header <code>x-api-key</code>. Website converter ini memakai endpoint internal <code>/api/convert</code>, jadi secret tidak pernah ditaruh di browser.</p>
-      <code>{ "svg": "&lt;svg...&gt;", "options": { "quality": "lossless" } }</code>
-      <p class="mini"><code>GET /api/v1/auth</code> untuk mengecek API key · <code>GET /api/health?deep=1</code></p>
+    <section class="card compact api-card">
+      <div>
+        <p class="eyebrow">ENGINE API v1</p>
+        <code>POST /api/v1/convert</code>
+      </div>
+      <p class="mini">
+        API key tetap diperiksa server-side. Website converter menggunakan endpoint internal
+        <code>/api/convert</code>, jadi secret tidak pernah ditaruh di browser.
+      </p>
     </section>
   </main>
-  <script type="module" src="/app.js?v=1.6.0"></script>
+
+  <script type="module" src="/app.js?v=1.7.0"></script>
 </body>
 </html>
