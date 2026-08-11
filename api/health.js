@@ -5,7 +5,7 @@ async function health(request) {
   const base = {
     ok: true,
     service: 'svg2xml-alight',
-    version: '1.5.2',
+    version: '1.5.3',
     runtime: `node-${process.versions.node}`,
     auth: process.env.SVG2XML_API_KEY ? 'api-key' : 'open'
   };

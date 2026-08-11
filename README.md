@@ -261,3 +261,10 @@ kurva Bézier. Self-intersection ekstrem tetap perlu verifikasi manual.
 - Tombol Convert tidak lagi memanggil `File.text()` pada reference Android yang bisa kedaluwarsa/revoked.
 - Pesan error file permission sekarang meminta pilih ulang file secara eksplisit.
 - Mode default UI diubah ke Lossless; tiga mode lama tetap tersedia dan behavior engine-nya tidak berubah.
+
+## v1.5.3 — grouped reducer reliability
+
+- Mode Lossless tidak diubah: node reduction tetap 0%, z-order/source-shape/stroke tetap dipertahankan.
+- Accurate/Balanced/Lightweight sekarang mereduksi setiap source contour secara independen sebelum digabung berdasarkan warna.
+- Satu contour yang gagal direduksi tidak lagi membatalkan reduction untuk seluruh group warna.
+- Warning per-warna yang memenuhi layar diganti satu warning agregat; jumlah fallback tersedia di `stats.nodeReductionFallbackShapes`.

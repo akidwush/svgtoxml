@@ -15,7 +15,7 @@ test('health endpoint returns JSON without loading converter dependencies', asyn
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.equal(body.ok, true);
-  assert.equal(body.version, '1.5.2');
+  assert.equal(body.version, '1.5.3');
 });
 
 test('convert endpoint validates body before dynamic converter import', async () => {

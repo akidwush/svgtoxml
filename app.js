@@ -181,6 +181,7 @@ convertBtn.addEventListener('click', async () => {
       stat('Shape digabung', data.stats.mergedShapes ?? 0),
       stat('Node', `${data.stats.nodesBefore ?? 0} → ${data.stats.nodesAfter ?? 0}`),
       stat('Stroke dihapus', data.stats.strokesRemoved ?? 0),
+      stat('Fallback reducer', data.stats.nodeReductionFallbackShapes ?? 0),
       stat('Ukuran XML', `${(data.stats.outputBytes / 1024).toFixed(1)} KB`)
     ].join('');
     warningsEl.innerHTML = (data.warnings || []).map((w) => `⚠ ${w}`).join('<br>');

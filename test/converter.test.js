@@ -117,3 +117,19 @@ test('lossless preserves two-stop gradient instead of flattening', () => {
   assert.match(out.xml, /fillType="gradient"/);
   assert.match(out.xml, /<gradient type="linear"/);
 });
+
+
+test('grouped reducer isolates fallback per source contour and never spams per-color warnings', () => {
+  const svg = `<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0 L10 0 L20 0 L30 0 L40 0 L50 0 L60 0 L70 0 L80 0 L90 0" fill="#ff0000"/>
+    <path d="M0 20 L10 20 L20 20 L30 20 L40 20 L50 20 L60 20 L70 20 L80 20 L90 20" fill="#ff0000"/>
+    <path d="M0 40 L10 40 L20 40 L30 40 L40 40 L50 40 L60 40 L70 40 L80 40 L90 40" fill="#00ff00"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'lightweight', nodeReduction: 65, minAreaPercent: 0 });
+  assert.equal(out.stats.colorGroups, 2);
+  assert.equal(out.profile.version, '1.5.3');
+  assert.ok(Number.isInteger(out.stats.nodeReductionFallbackShapes));
+  assert.ok(Number.isInteger(out.stats.nodeReductionReducedShapes));
+  assert.ok(Number.isInteger(out.stats.nodeReductionUnchangedShapes));
+  assert.equal(out.warnings.some((w) => /Node reduction gagal pada group #/i.test(w)), false);
+});
