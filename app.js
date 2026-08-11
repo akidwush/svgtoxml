@@ -138,7 +138,7 @@ convertBtn.addEventListener('click', async () => {
       throw new Error('SVG belum tersimpan di memori. Pilih ulang file SVG lalu coba lagi.');
     }
 
-    const response = await fetch('/api/v1/convert', {
+    const response = await fetch('/api/convert', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({

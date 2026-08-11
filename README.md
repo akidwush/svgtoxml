@@ -24,41 +24,46 @@ Buka URL lokal yang diberikan Vercel CLI.
 
 ## Deploy ke Vercel
 
-Import repo ini ke Vercel. Tidak membutuhkan database.
+Import repo ini ke Vercel. Converter web tetap dapat dipakai tanpa memasukkan secret ke browser.
 
-Environment variable opsional untuk akses API eksternal:
+### Aktifkan Engine API untuk website lain
 
-```env
-SVG2XML_API_KEY=buat_key_rahasia_sendiri
-ALLOWED_ORIGINS=https://website-klien.example
-MAX_SVG_BYTES=3000000
+v1.6 memisahkan dua endpoint:
+
+```text
+POST /api/convert       -> dipakai website svgtoxml sendiri
+POST /api/v1/convert    -> engine API eksternal, API key wajib
 ```
 
-Frontend resmi tidak membutuhkan key dan tidak pernah menerima secret tersebut. Jika `SVG2XML_API_KEY` diaktifkan, key hanya diwajibkan untuk request eksternal/cross-origin.
-
-Buat API key acak dari Termux:
+Buat key di Termux:
 
 ```bash
-bash scripts/generate-api-key.sh
+bash scripts/generate-api-key.sh website-utama
 ```
 
-Salin hasilnya ke `SVG2XML_API_KEY` di Vercel.
+Di Vercel buka **Project → Settings → Environment Variables**, lalu tambahkan satu key:
 
-Jika `SVG2XML_API_KEY` kosong, API eksternal bersifat terbuka. Jika diisi, request dari website/app lain wajib mengirim salah satu:
-
-```http
-x-api-key: KEY_KAMU
+```env
+SVG2XML_API_KEY=amx_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-atau:
+Atau beberapa key, satu per website:
 
-```http
-Authorization: Bearer KEY_KAMU
+```env
+SVG2XML_API_KEYS=website-a=amx_live_xxx,website-b=amx_live_yyy
 ```
 
-Jangan menaruh API key rahasia di frontend publik. Frontend converter bawaan memakai akses same-origin; integrasi pihak ketiga memakai header API key.
+Opsional batasi origin browser:
 
-## API
+```env
+API_ALLOWED_ORIGINS=https://website-a.vercel.app,https://website-b.com
+```
+
+Jika `API_ALLOWED_ORIGINS` kosong, origin tidak dibatasi tetapi API key tetap wajib. Setelah mengubah Environment Variables, redeploy project.
+
+> **Penting:** jangan menaruh `amx_live_...` di JavaScript frontend publik website lain. Simpan key sebagai environment variable di backend/serverless function website tersebut.
+
+## Engine API v1
 
 ### Health
 
@@ -66,12 +71,19 @@ Jangan menaruh API key rahasia di frontend publik. Frontend converter bawaan mem
 GET /api/v1/health
 ```
 
+### Validasi API key
+
+```http
+GET /api/v1/auth
+x-api-key: amx_live_...
+```
+
 ### Convert
 
 ```http
 POST /api/v1/convert
 Content-Type: application/json
-x-api-key: KEY_KAMU
+x-api-key: amx_live_...
 ```
 
 Body:
@@ -81,25 +93,24 @@ Body:
   "svg": "<svg viewBox=\"0 0 1080 1350\">...</svg>",
   "options": {
     "title": "Project Saya",
-    "quality": "accurate",
-    "maxShapes": 2500,
-    "minAreaPercent": 0,
-    "precision": 5,
-    "duration": 1000,
-    "fps": 30
+    "quality": "lossless",
+    "validateBounds": true
   }
 }
 ```
 
-Response JSON berisi `xml`, `stats`, dan `warnings`.
+Untuk menerima XML langsung gunakan `POST /api/v1/convert?raw=1` atau header `Accept: application/xml`. `Authorization: Bearer amx_live_...` juga didukung.
 
-Untuk response langsung XML:
+Contoh curl:
 
-```text
-POST /api/v1/convert?raw=1
+```bash
+curl -X POST 'https://svgtoxml.vercel.app/api/v1/convert' \
+  -H 'content-type: application/json' \
+  -H 'x-api-key: amx_live_KEY_KAMU' \
+  --data '{"svg":"<svg viewBox=\"0 0 100 100\"><path d=\"M0 0L100 0L100 100Z\" fill=\"#000\"/></svg>","options":{"quality":"lossless"}}'
 ```
 
-atau kirim header `Accept: application/xml`.
+Untuk website Vercel lain, lihat `examples/vercel-server-proxy.js`.
 
 ## Arti opsi
 
@@ -268,3 +279,15 @@ kurva Bézier. Self-intersection ekstrem tetap perlu verifikasi manual.
 - Accurate/Balanced/Lightweight sekarang mereduksi setiap source contour secara independen sebelum digabung berdasarkan warna.
 - Satu contour yang gagal direduksi tidak lagi membatalkan reduction untuk seluruh group warna.
 - Warning per-warna yang memenuhi layar diganti satu warning agregat; jumlah fallback tersedia di `stats.nodeReductionFallbackShapes`.
+
+
+## v1.6.0 — External Engine API keys
+
+- Website resmi memakai `POST /api/convert`.
+- Integrasi eksternal memakai `POST /api/v1/convert` dan API key selalu wajib.
+- Mendukung satu key via `SVG2XML_API_KEY` atau multi-key bernama via `SVG2XML_API_KEYS`.
+- Perbandingan secret memakai SHA-256 + `crypto.timingSafeEqual`.
+- `GET /api/v1/auth` memvalidasi key tanpa melakukan konversi.
+- `API_ALLOWED_ORIGINS` dapat membatasi origin browser.
+- Secret tidak pernah ditaruh di frontend converter resmi.
+- Contoh proxy server-side tersedia di `examples/vercel-server-proxy.js`.

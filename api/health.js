@@ -1,13 +1,19 @@
+import { apiKeyStatus } from '../lib/api-auth.js';
+
 async function health(request) {
   const url = new URL(request.url);
   const deep = url.searchParams.get('deep') === '1';
+  const keys = apiKeyStatus();
 
   const base = {
     ok: true,
     service: 'svg2xml-alight',
-    version: '1.5.3',
+    version: '1.6.0',
     runtime: `node-${process.versions.node}`,
-    auth: process.env.SVG2XML_API_KEY ? 'api-key' : 'open'
+    publicWebEndpoint: '/api/convert',
+    externalApiEndpoint: '/api/v1/convert',
+    externalApiAuth: keys.configured ? 'api-key-required' : 'not-configured',
+    configuredApiKeys: keys.count
   };
 
   if (deep) {
@@ -33,6 +39,4 @@ async function health(request) {
   });
 }
 
-export default {
-  fetch: health
-};
+export default { fetch: health };

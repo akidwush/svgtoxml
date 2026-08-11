@@ -87,11 +87,11 @@
     <section class="card compact">
       <p class="eyebrow">ENGINE API v1</p>
       <code>POST /api/v1/convert</code>
-      <p class="mini">Website ini memakai engine API secara internal tanpa menampilkan API key. Aplikasi atau website pihak ketiga dapat memakai endpoint yang sama dengan header <code>x-api-key</code> bila proteksi API diaktifkan di Vercel.</p>
+      <p class="mini">Endpoint integrasi untuk website/app lain. API key selalu diperiksa di endpoint v1 dan dikirim lewat header <code>x-api-key</code>. Website converter ini memakai endpoint internal <code>/api/convert</code>, jadi secret tidak pernah ditaruh di browser.</p>
       <code>{ "svg": "&lt;svg...&gt;", "options": { "quality": "lossless" } }</code>
-      <p class="mini"><code>GET /api/health?deep=1</code></p>
+      <p class="mini"><code>GET /api/v1/auth</code> untuk mengecek API key · <code>GET /api/health?deep=1</code></p>
     </section>
   </main>
-  <script type="module" src="/app.js?v=1.5.3"></script>
+  <script type="module" src="/app.js?v=1.6.0"></script>
 </body>
 </html>
