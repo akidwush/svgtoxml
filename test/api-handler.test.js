@@ -29,7 +29,7 @@ test('health endpoint reports external API auth state without loading converter 
       assert.equal(response.status, 200);
       const body = await response.json();
       assert.equal(body.ok, true);
-      assert.equal(body.version, '1.6.0');
+      assert.equal(body.version, '1.7.0');
       assert.equal(body.externalApiAuth, 'not-configured');
       assert.equal(body.configuredApiKeys, 0);
     });

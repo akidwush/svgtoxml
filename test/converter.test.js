@@ -127,9 +127,73 @@ test('grouped reducer isolates fallback per source contour and never spams per-c
   </svg>`;
   const out = convertSvgToAlightXml(svg, { quality: 'lightweight', nodeReduction: 65, minAreaPercent: 0 });
   assert.equal(out.stats.colorGroups, 2);
-  assert.equal(out.profile.version, '1.5.3');
+  assert.equal(out.profile.version, '1.7.0');
   assert.ok(Number.isInteger(out.stats.nodeReductionFallbackShapes));
   assert.ok(Number.isInteger(out.stats.nodeReductionReducedShapes));
   assert.ok(Number.isInteger(out.stats.nodeReductionUnchangedShapes));
   assert.equal(out.warnings.some((w) => /Node reduction gagal pada group #/i.test(w)), false);
+});
+
+
+test('optimized removes micro subpaths but keeps main silhouette', () => {
+  const dots = Array.from({ length: 12 }, (_, i) => {
+    const x = 10 + i * 3;
+    return `M${x} 10 L${x + 0.5} 10 L${x + 0.5} 10.5 L${x} 10.5 Z`;
+  }).join(' ');
+  const svg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#ff0000" d="M10 20 L90 20 L90 90 L10 90 Z ${dots}"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, {
+    quality: 'optimized', nodeReduction: 0, minAreaPercent: 0,
+    microDetailPercent: 0.01, maxOutputGroups: 100
+  });
+  assert.equal(out.profile.quality, 'optimized');
+  assert.equal(out.stats.outputShapes, 1);
+  assert.ok(out.stats.microSubpathsRemoved >= 12);
+  assert.ok(out.stats.microNodesRemoved > 0);
+  assert.match(out.xml, /<path d="[^"]+"/);
+});
+
+test('optimized safely merges same color across non-overlapping z-order barrier', () => {
+  const svg = `<svg width="120" height="80" xmlns="http://www.w3.org/2000/svg">
+    <rect id="red-a" x="0" y="0" width="20" height="20" fill="#ff0000"/>
+    <rect id="blue" x="80" y="40" width="20" height="20" fill="#0000ff"/>
+    <rect id="red-b" x="30" y="0" width="20" height="20" fill="#ff0000"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, {
+    quality: 'optimized', nodeReduction: 0, minAreaPercent: 0,
+    microDetailPercent: 0, maxOutputGroups: 100
+  });
+  assert.equal(out.stats.outputShapes, 2);
+  assert.equal(out.stats.safeColorMerges, 1);
+  assert.equal((out.xml.match(/<embedScene\b/g) || []).length, 2);
+});
+
+test('optimized refuses same-color merge when an intervening overlapping shape would change z-order', () => {
+  const svg = `<svg width="120" height="80" xmlns="http://www.w3.org/2000/svg">
+    <rect id="red-back" x="0" y="0" width="50" height="50" fill="#ff0000"/>
+    <rect id="blue-middle" x="25" y="0" width="50" height="50" fill="#0000ff"/>
+    <rect id="red-front" x="40" y="0" width="50" height="50" fill="#ff0000"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, {
+    quality: 'optimized', nodeReduction: 0, minAreaPercent: 0,
+    microDetailPercent: 0, maxOutputGroups: 100
+  });
+  assert.equal(out.stats.outputShapes, 3);
+  assert.ok(out.stats.zOrderBarriers >= 1);
+  assert.equal(out.stats.safeColorMerges, 0);
+});
+
+test('optimized hard-caps layer count by dropping smallest groups last', () => {
+  const items = Array.from({ length: 30 }, (_, i) => {
+    const color = `#${(0x100000 + i * 12345).toString(16).slice(-6)}`;
+    return `<rect x="${i * 3}" y="${i % 5}" width="2" height="2" fill="${color}"/>`;
+  }).join('');
+  const svg = `<svg width="120" height="80" xmlns="http://www.w3.org/2000/svg">${items}</svg>`;
+  const out = convertSvgToAlightXml(svg, {
+    quality: 'optimized', nodeReduction: 0, minAreaPercent: 0,
+    microDetailPercent: 0, maxOutputGroups: 20
+  });
+  assert.equal(out.stats.outputShapes, 20);
+  assert.equal(out.stats.optimizedGroupsDropped, 10);
 });

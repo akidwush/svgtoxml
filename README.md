@@ -291,3 +291,32 @@ kurva Bézier. Self-intersection ekstrem tetap perlu verifikasi manual.
 - `API_ALLOWED_ORIGINS` dapat membatasi origin browser.
 - Secret tidak pernah ditaruh di frontend converter resmi.
 - Contoh proxy server-side tersedia di `examples/vercel-server-proxy.js`.
+
+
+## v1.7.0 — AM Optimized / phone-first XML
+
+Mode baru `optimized` ditambahkan dan menjadi default UI. API tetap kompatibel dengan default lama bila `quality` tidak dikirim; integrasi baru disarankan mengirim `quality: "optimized"` secara eksplisit. Mode lama `lossless`, `accurate`, `balanced`, dan `lightweight` tetap tersedia.
+
+AM Optimized dibuat untuk SVG auto-vector yang bisa menghasilkan ribuan layer di Alight Motion:
+
+- membuang subpath/titik mikro berdasarkan luas relatif canvas;
+- melindungi detail panjang-tipis agar garis penting tidak ikut hilang;
+- mengurangi node secara moderat per contour;
+- mempertahankan native stroke dan gradient 2-stop bila tersedia;
+- menggabungkan path dengan style sama hanya jika perpindahan z-order tidak memotong shape yang overlap;
+- membatasi layer output (default 320) dengan membuang group mikro terkecil bila masih terlalu banyak;
+- mengembalikan statistik `microSubpathsRemoved`, `safeColorMerges`, `zOrderBarriers`, dan `optimizedGroupsDropped`.
+
+Contoh API:
+
+```json
+{
+  "svg": "<svg>...</svg>",
+  "options": {
+    "quality": "optimized",
+    "microDetailPercent": 0.0015,
+    "maxOutputGroups": 320,
+    "nodeReduction": 38
+  }
+}
+```
