@@ -162,7 +162,8 @@ convertBtn.addEventListener('click', async () => {
           maxOutputGroups: Number($('maxOutputGroups').value),
           groupByColor: quality.value !== 'lossless',
           removeStrokes: !['lossless', 'optimized'].includes(quality.value),
-          validateBounds: quality.value === 'lossless'
+          validateBounds: quality.value === 'lossless',
+          requireExact: quality.value === 'lossless'
         }
       })
     });
@@ -174,7 +175,10 @@ convertBtn.addEventListener('click', async () => {
       const serverMessage = data.error || rawResponse.trim();
       const code = data.code ? ` [${data.code}]` : '';
       const detail = data.detail ? ` — ${data.detail}` : '';
-      throw new Error(`${serverMessage || `HTTP ${response.status}`}${code}${detail}`);
+      const fidelityDetail = data.fidelity?.losses?.length
+        ? ` — loss: ${data.fidelity.losses.map((loss) => loss.code).join(', ')}`
+        : '';
+      throw new Error(`${serverMessage || `HTTP ${response.status}`}${code}${detail}${fidelityDetail}`);
     }
 
     lastXml = data.xml;

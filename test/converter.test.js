@@ -127,7 +127,7 @@ test('grouped reducer isolates fallback per source contour and never spams per-c
   </svg>`;
   const out = convertSvgToAlightXml(svg, { quality: 'lightweight', nodeReduction: 65, minAreaPercent: 0 });
   assert.equal(out.stats.colorGroups, 2);
-  assert.equal(out.profile.version, '1.8.0');
+  assert.equal(out.profile.version, '1.9.0');
   assert.ok(Number.isInteger(out.stats.nodeReductionFallbackShapes));
   assert.ok(Number.isInteger(out.stats.nodeReductionReducedShapes));
   assert.ok(Number.isInteger(out.stats.nodeReductionUnchangedShapes));
@@ -248,13 +248,65 @@ test('fidelity report never claims exact output when SVG-only features are degra
   assert.ok(out.fidelity.losses.some((loss) => loss.code === 'stroke-dash'));
 });
 
-test('fidelity audit detects group compositing, CSS blend mode and gradient stroke losses', () => {
+test('maximum fidelity preserves group opacity as nested AM compositing', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <g id="translucent" opacity=".5">
+      <rect width="70" height="70" fill="red"/>
+      <rect x="30" y="30" width="70" height="70" fill="blue"/>
+    </g>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'lossless' });
+  assert.equal(out.fidelity.exact, true);
+  assert.equal(out.stats.groupOpacityPreserved, 1);
+  assert.match(out.xml, /translucent · Opacity/);
+  assert.match(out.xml, /<opacity value="0\.50000000" \/>/);
+  assert.match(out.xml, /<fillColor value="#ffff0000" \/>/i);
+  assert.match(out.xml, /<fillColor value="#ff0000ff" \/>/i);
+});
+
+test('maximum fidelity applies element opacity after fill and stroke compositing', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="80" height="80" opacity=".4" fill="red" stroke="blue" stroke-width="10"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'lossless' });
+  assert.equal(out.fidelity.exact, true);
+  assert.match(out.xml, /<opacity value="0\.40000000" \/>/);
+  assert.match(out.xml, /<fillColor value="#ffff0000" \/>/i);
+  assert.match(out.xml, /<color value="#ff0000ff" \/>/i);
+});
+
+test('fidelity audit detects CSS blend mode and gradient stroke losses', () => {
   const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
     <defs><linearGradient id="g"><stop offset="0" stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient></defs>
-    <g opacity=".5"><path d="M0 0L100 100" fill="none" stroke="url(#g)" stroke-width="4" style="mix-blend-mode:multiply"/></g>
+    <path d="M0 0L100 100" fill="none" stroke="url(#g)" stroke-width="4" style="mix-blend-mode:multiply"/>
   </svg>`;
   const out = convertSvgToAlightXml(svg, { quality: 'lossless' });
   assert.equal(out.fidelity.exact, false);
-  assert.ok(out.fidelity.losses.some((loss) => loss.code === 'group-opacity'));
   assert.ok(out.fidelity.losses.some((loss) => loss.code === 'gradient-stroke'));
+  assert.ok(out.fidelity.losses.some((loss) => loss.code === 'blend-mode'));
+});
+
+test('requireExact rejects known visual losses instead of returning misleading XML', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <text x="10" y="50">Unsupported text</text>
+  </svg>`;
+  assert.throws(
+    () => convertSvgToAlightXml(svg, { quality: 'lossless', requireExact: true }),
+    (error) => error?.code === 'FIDELITY_REQUIREMENT_FAILED' && error?.fidelity?.exact === false
+  );
+});
+
+test('strict audit rejects non-uniform transformed strokes and SVG animation', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <path transform="scale(2 1)" d="M10 10L40 40" fill="none" stroke="black" stroke-width="4">
+      <animate attributeName="opacity" from="0" to="1" dur="1s"/>
+    </path>
+  </svg>`;
+  assert.throws(
+    () => convertSvgToAlightXml(svg, { quality: 'lossless', requireExact: true }),
+    (error) => {
+      const codes = new Set(error?.fidelity?.losses?.map((loss) => loss.code));
+      return codes.has('nonuniform-stroke') && codes.has('svg-animation');
+    }
+  );
 });

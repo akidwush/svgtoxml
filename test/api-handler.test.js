@@ -29,7 +29,7 @@ test('health endpoint reports external API auth state without loading converter 
       assert.equal(response.status, 200);
       const body = await response.json();
       assert.equal(body.ok, true);
-      assert.equal(body.version, '1.7.0');
+      assert.equal(body.version, '1.9.0');
       assert.equal(body.externalApiAuth, 'not-configured');
       assert.equal(body.configuredApiKeys, 0);
     });
@@ -56,6 +56,24 @@ test('public website endpoint rejects cross-origin browser usage', async () => {
   assert.equal(response.status, 403);
   const body = await response.json();
   assert.equal(body.code, 'USE_EXTERNAL_API');
+});
+
+test('strict maximum fidelity returns structured 422 instead of degraded XML', async () => {
+  const response = await publicConvertHandler.fetch(new Request('https://example.test/api/convert', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin: 'https://example.test' },
+    body: JSON.stringify({
+      svg: '<svg width="100" height="100"><text x="5" y="20">Nexora</text></svg>',
+      options: { quality: 'lossless', requireExact: true }
+    })
+  }));
+  assert.equal(response.status, 422);
+  const body = await response.json();
+  assert.equal(body.ok, false);
+  assert.equal(body.code, 'FIDELITY_REQUIREMENT_FAILED');
+  assert.equal(body.fidelity.exact, false);
+  assert.ok(body.fidelity.losses.some((loss) => loss.code === 'text'));
+  assert.equal(body.xml, undefined);
 });
 
 test('external v1 API refuses requests until owner configures a key', async () => {

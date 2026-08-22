@@ -93,7 +93,8 @@ Body:
   "options": {
     "title": "Project Saya",
     "quality": "lossless",
-    "validateBounds": true
+    "validateBounds": true,
+    "requireExact": true
   }
 }
 ```
@@ -329,3 +330,24 @@ Contoh API:
 - Unit `in`, `cm`, `mm`, `q`, `pt`, `pc`, `px` dan geometri persen dihitung terhadap viewport/viewBox yang tepat.
 - Style class/CSS pada gradient stop kini dipertahankan.
 - API menambahkan `fidelity` dan statistik loss spesifik: clip, mask, filter, pattern, marker, dash, cap, shape hilang, serta bbox mismatch.
+
+## v1.9.0 — Strict Maximum Fidelity
+
+- Frontend selalu mengirim `requireExact: true` pada mode Maximum Fidelity.
+- Jika audit menemukan fitur yang tidak dapat direpresentasikan sama, API mengembalikan HTTP `422` dengan code `FIDELITY_REQUIREMENT_FAILED`, `fidelity.losses`, dan warnings; XML yang menyesatkan tidak diberikan.
+- Opacity pada shape ditulis sebagai opacity transform layer, sehingga fill dan stroke dikomposit lebih dulu sesuai SVG.
+- Opacity pada `<g>` dan instance `<use>` dipertahankan sebagai nested `embedScene`; overlap antar-child tidak lagi berubah akibat alpha yang sebelumnya diratakan ke tiap warna.
+- Root SVG opacity juga diterapkan pada wrapper scene.
+
+Contoh integrasi strict untuk Nexora:
+
+```json
+{
+  "svg": "<svg>...</svg>",
+  "options": {
+    "quality": "lossless",
+    "validateBounds": true,
+    "requireExact": true
+  }
+}
+```

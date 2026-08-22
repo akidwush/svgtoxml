@@ -10,9 +10,9 @@
 <body>
   <main class="shell">
     <header>
-      <p class="eyebrow">SVG → XML · AM OPTIMIZED + MAX FIDELITY v1.8</p>
+      <p class="eyebrow">SVG → XML · STRICT MAXIMUM FIDELITY v1.9</p>
       <h1>Alight Motion Converter</h1>
-      <p class="sub">Maximum Fidelity direkomendasikan jika hasil harus semirip mungkin: geometri, z-order, transform, stroke, gradient, CSS, dan clipPath dipertahankan. AM Optimized tersedia untuk XML yang lebih ringan.</p>
+      <p class="sub">Maximum Fidelity kini bersifat strict: geometri, z-order, transform, compositing opacity, stroke, gradient, CSS, dan clipPath dipertahankan. Konversi ditolak jika engine mendeteksi perbedaan visual yang tidak bisa direpresentasikan.</p>
     </header>
 
     <section class="card">
@@ -27,7 +27,7 @@
         <label>
           <span>Mode kualitas</span>
           <select id="quality">
-            <option value="lossless" selected>Maximum Fidelity — audit kesamaan aktif</option>
+            <option value="lossless" selected>Strict Maximum Fidelity — wajib sama</option>
             <option value="optimized">AM Optimized — ringan + z-order aman</option>
             <option value="accurate">Accurate Grouped — node -35%</option>
             <option value="balanced">Balanced Grouped — node -50%</option>
@@ -70,7 +70,7 @@
             <input id="maxOutputGroups" type="number" min="20" max="1200" step="10" value="320" />
           </label>
         </div>
-        <p id="losslessNote" class="mini hidden">Maximum Fidelity mengunci node 0%, detail threshold 0%, shape unlimited, presisi 8, grouping OFF, stroke native ON, clipPath mask ON, dan melaporkan setiap fitur yang tidak bisa dipertahankan.</p>
+        <p id="losslessNote" class="mini hidden">Strict Maximum Fidelity mengunci node 0%, detail threshold 0%, shape unlimited, presisi 8, grouping warna OFF, native stroke/clipPath/group opacity ON. Output dibatalkan jika audit menemukan kehilangan visual.</p>
         <p id="optimizedNote" class="mini">AM Optimized: hapus titik/subpath mikro, reducer moderat, native stroke tetap ada, lalu merge warna hanya jika tidak menabrak z-order. Target layer output default 320.</p>
       </details>
 
@@ -102,6 +102,6 @@
       <p class="mini"><code>GET /api/v1/auth</code> untuk mengecek API key · <code>GET /api/health?deep=1</code></p>
     </section>
   </main>
-  <script type="module" src="/app.js?v=1.8.0"></script>
+  <script type="module" src="/app.js?v=1.9.0"></script>
 </body>
 </html>

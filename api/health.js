@@ -8,7 +8,7 @@ async function health(request) {
   const base = {
     ok: true,
     service: 'svg2xml-alight',
-    version: '1.7.0',
+    version: '1.9.0',
     runtime: `node-${process.versions.node}`,
     publicWebEndpoint: '/api/convert',
     externalApiEndpoint: '/api/v1/convert',
