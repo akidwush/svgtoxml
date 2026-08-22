@@ -66,10 +66,10 @@ function readFileAsText(file) {
 }
 
 function analyzeSvgText(text) {
-  const paths = (text.match(/<path\b/gi) || []).length;
+  const vectors = (text.match(/<(?:path|rect|circle|ellipse|line|polyline|polygon)\b/gi) || []).length;
   const gradients = (text.match(/<(?:linearGradient|radialGradient)\b/gi) || []).length;
   const clips = (text.match(/<(?:clipPath|mask)\b/gi) || []).length;
-  return `${paths} path · ${gradients} gradient · ${clips} clip/mask`;
+  return `${vectors} vector · ${gradients} gradient · ${clips} clip/mask`;
 }
 
 fileInput.addEventListener('change', () => {
@@ -181,11 +181,15 @@ convertBtn.addEventListener('click', async () => {
     xmlOutput.value = data.xml;
     const isLossless = data.profile?.quality === 'lossless';
     const isOptimized = data.profile?.quality === 'optimized';
+    const fidelityExact = data.fidelity?.exact === true;
+    const fidelityLosses = data.fidelity?.losses?.length || 0;
     statsEl.innerHTML = isLossless ? [
       stat('Shape output', data.stats.outputShapes ?? 0),
       stat('Node', `${data.stats.nodesBefore ?? 0} → ${data.stats.nodesAfter ?? 0}`),
       stat('Stroke native', data.stats.strokes ?? 0),
+      stat('clipPath mask', data.stats.clipPathsApplied ?? 0),
       stat('BBox mismatch', data.stats.bboxMismatches ?? 0),
+      stat('Audit fidelity', fidelityExact ? 'Tanpa loss' : `${fidelityLosses} loss`),
       stat('Ukuran XML', `${(data.stats.outputBytes / 1024).toFixed(1)} KB`)
     ].join('') : isOptimized ? [
       stat('Layer output', data.stats.outputShapes ?? 0),
@@ -202,15 +206,22 @@ convertBtn.addEventListener('click', async () => {
       stat('Fallback reducer', data.stats.nodeReductionFallbackShapes ?? 0),
       stat('Ukuran XML', `${(data.stats.outputBytes / 1024).toFixed(1)} KB`)
     ].join('');
-    warningsEl.innerHTML = (data.warnings || []).map((w) => `⚠ ${w}`).join('<br>');
+    const fidelityMessage = isLossless
+      ? (fidelityExact
+          ? ['✓ Audit fidelity: tidak ada kehilangan fitur yang diketahui.']
+          : [`⚠ Audit fidelity menemukan ${fidelityLosses} jenis perbedaan; lihat detail di bawah.`])
+      : [];
+    warningsEl.innerHTML = [...fidelityMessage, ...(data.warnings || []).map((w) => `⚠ ${w}`)].join('<br>');
     $('resultTitle').textContent = isLossless
-      ? `${data.width}×${data.height} · ${data.stats.outputShapes} shape · Lossless`
+      ? `${data.width}×${data.height} · ${data.stats.outputShapes} shape · Maximum Fidelity`
       : isOptimized
         ? `${data.width}×${data.height} · ${data.stats.outputShapes} layer · AM Optimized`
         : `${data.width}×${data.height} · ${data.stats.colorGroups ?? data.stats.outputShapes} group warna · ${data.profile?.quality || quality.value}`;
     resultCard.classList.remove('hidden');
     if (isLossless) {
-      status.textContent = `Selesai · ${data.stats.outputShapes} shape · node 0% reduction · stroke dipertahankan · z-order asli.`;
+      status.textContent = fidelityExact
+        ? `Selesai · tidak ada loss terdeteksi · ${data.stats.outputShapes} shape · clipPath ${data.stats.clipPathsApplied || 0} · z-order asli.`
+        : `Selesai dengan ${fidelityLosses} jenis perbedaan · periksa warning sebelum memakai XML.`;
     } else if (isOptimized) {
       const reduced = Math.max(0, (data.stats.nodesBefore || 0) - (data.stats.nodesAfter || 0));
       status.textContent = `Selesai · ${data.stats.outputShapes} layer · ${data.stats.microSubpathsRemoved || 0} titik/subpath mikro dibuang · ${reduced} node dikurangi.`;

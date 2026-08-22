@@ -10,9 +10,9 @@
 <body>
   <main class="shell">
     <header>
-      <p class="eyebrow">SVG → XML · AM OPTIMIZED + LOSSLESS v1.7</p>
+      <p class="eyebrow">SVG → XML · AM OPTIMIZED + MAX FIDELITY v1.8</p>
       <h1>Alight Motion Converter</h1>
-      <p class="sub">AM Optimized direkomendasikan untuk HP: titik/subpath mikro dibersihkan, node dikurangi, dan path sewarna hanya digabung jika aman terhadap z-order. Lossless tetap tersedia untuk fidelity maksimum.</p>
+      <p class="sub">Maximum Fidelity direkomendasikan jika hasil harus semirip mungkin: geometri, z-order, transform, stroke, gradient, CSS, dan clipPath dipertahankan. AM Optimized tersedia untuk XML yang lebih ringan.</p>
     </header>
 
     <section class="card">
@@ -27,8 +27,8 @@
         <label>
           <span>Mode kualitas</span>
           <select id="quality">
-            <option value="optimized" selected>AM Optimized — ringan + z-order aman</option>
-            <option value="lossless">Lossless / 100% Akurat — node 0%</option>
+            <option value="lossless" selected>Maximum Fidelity — audit kesamaan aktif</option>
+            <option value="optimized">AM Optimized — ringan + z-order aman</option>
             <option value="accurate">Accurate Grouped — node -35%</option>
             <option value="balanced">Balanced Grouped — node -50%</option>
             <option value="lightweight">Lightweight Grouped — node -65%</option>
@@ -70,7 +70,7 @@
             <input id="maxOutputGroups" type="number" min="20" max="1200" step="10" value="320" />
           </label>
         </div>
-        <p id="losslessNote" class="mini hidden">Mode Lossless mengunci: node reduction 0%, detail threshold 0%, shape unlimited, precision 8, grouping warna OFF, stroke native ON.</p>
+        <p id="losslessNote" class="mini hidden">Maximum Fidelity mengunci node 0%, detail threshold 0%, shape unlimited, presisi 8, grouping OFF, stroke native ON, clipPath mask ON, dan melaporkan setiap fitur yang tidak bisa dipertahankan.</p>
         <p id="optimizedNote" class="mini">AM Optimized: hapus titik/subpath mikro, reducer moderat, native stroke tetap ada, lalu merge warna hanya jika tidak menabrak z-order. Target layer output default 320.</p>
       </details>
 
@@ -102,6 +102,6 @@
       <p class="mini"><code>GET /api/v1/auth</code> untuk mengecek API key · <code>GET /api/health?deep=1</code></p>
     </section>
   </main>
-  <script type="module" src="/app.js?v=1.7.0"></script>
+  <script type="module" src="/app.js?v=1.8.0"></script>
 </body>
 </html>

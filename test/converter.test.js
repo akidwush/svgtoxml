@@ -127,7 +127,7 @@ test('grouped reducer isolates fallback per source contour and never spams per-c
   </svg>`;
   const out = convertSvgToAlightXml(svg, { quality: 'lightweight', nodeReduction: 65, minAreaPercent: 0 });
   assert.equal(out.stats.colorGroups, 2);
-  assert.equal(out.profile.version, '1.7.0');
+  assert.equal(out.profile.version, '1.8.0');
   assert.ok(Number.isInteger(out.stats.nodeReductionFallbackShapes));
   assert.ok(Number.isInteger(out.stats.nodeReductionReducedShapes));
   assert.ok(Number.isInteger(out.stats.nodeReductionUnchangedShapes));
@@ -196,4 +196,65 @@ test('optimized hard-caps layer count by dropping smallest groups last', () => {
   });
   assert.equal(out.stats.outputShapes, 20);
   assert.equal(out.stats.optimizedGroupsDropped, 10);
+});
+
+test('maximum fidelity converts inherited clipPath into an isolated native AM mask', () => {
+  const svg = `<svg width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+    <defs><clipPath id="round-clip"><circle cx="50" cy="50" r="40"/></clipPath></defs>
+    <g clip-path="url(#round-clip)"><rect id="clipped" width="200" height="100" fill="#ff0000"/></g>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'lossless' });
+  assert.equal(out.stats.clipPathsApplied, 1);
+  assert.equal(out.stats.clipPathsUnsupported, 0);
+  assert.match(out.xml, /SVG clipPath/);
+  assert.match(out.xml, /blending="mask"/);
+  assert.equal(out.fidelity.exact, true);
+});
+
+test('maximum fidelity resolves CSS variables, important cascade, complex selectors and percentage geometry', () => {
+  const svg = `<svg width="200" height="100" viewBox="0 0 200 100" style="--accent:#123456" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      rect { fill: #ffffff !important; }
+      svg > g[data-kind="hero"] rect.item { fill: var(--accent) !important; }
+    </style>
+    <g data-kind="hero"><rect id="css-shape" class="item" width="50%" height="50%"/></g>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'lossless' });
+  assert.match(out.xml, /<fillColor value="#ff123456" \/>/i);
+  assert.match(out.xml, /M -100 -50L 0 -50L 0 0L -100 0Z/);
+  assert.equal(out.fidelity.exact, true);
+});
+
+test('gradient stops honor stylesheet selectors and CSS variables', () => {
+  const svg = `<svg width="100" height="100" style="--end:#0000ff" xmlns="http://www.w3.org/2000/svg">
+    <style>.start { stop-color:#ff0000 } .end { stop-color:var(--end); stop-opacity:50% }</style>
+    <defs><linearGradient id="g"><stop class="start" offset="0"/><stop class="end" offset="1"/></linearGradient></defs>
+    <rect width="100" height="100" fill="url(#g)"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'lossless' });
+  assert.match(out.xml, /startColor="#ffff0000"/i);
+  assert.match(out.xml, /endColor="#800000ff"/i);
+  assert.equal(out.fidelity.exact, true);
+});
+
+test('fidelity report never claims exact output when SVG-only features are degraded', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <defs><mask id="m"><rect width="100" height="100" fill="white"/></mask></defs>
+    <rect width="100" height="100" fill="red" mask="url(#m)" stroke="black" stroke-dasharray="4 2"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'lossless' });
+  assert.equal(out.fidelity.exact, false);
+  assert.ok(out.fidelity.losses.some((loss) => loss.code === 'svg-mask'));
+  assert.ok(out.fidelity.losses.some((loss) => loss.code === 'stroke-dash'));
+});
+
+test('fidelity audit detects group compositing, CSS blend mode and gradient stroke losses', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="g"><stop offset="0" stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient></defs>
+    <g opacity=".5"><path d="M0 0L100 100" fill="none" stroke="url(#g)" stroke-width="4" style="mix-blend-mode:multiply"/></g>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'lossless' });
+  assert.equal(out.fidelity.exact, false);
+  assert.ok(out.fidelity.losses.some((loss) => loss.code === 'group-opacity'));
+  assert.ok(out.fidelity.losses.some((loss) => loss.code === 'gradient-stroke'));
 });

@@ -1,9 +1,9 @@
 {
   "name": "svg2xml-alight",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "private": true,
   "type": "module",
-  "description": "SVG to Alight Motion XML converter with AM Optimized phone-first mode, lossless geometry mode, and external API keys.",
+  "description": "SVG to Alight Motion XML converter with maximum-fidelity SVG parsing, native clipPath masks, AM Optimized mode, and external API keys.",
   "scripts": {
     "test": "node --test",
     "check": "node --check api/convert.js && node --check api/health.js && node --check api/v1/convert.js && node --check api/v1/health.js && node --check api/v1/auth.js && node --check lib/api-auth.js && node --check lib/api-http.js && node --check lib/path-geometry.js && node --check lib/converter.js && node --check app.js"

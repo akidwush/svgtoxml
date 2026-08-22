@@ -1,14 +1,13 @@
 # SVG → Alight Motion XML
 
-Tool ringan untuk mengubah SVG menjadi XML scene Alight Motion. v1.4 memakai struktur `<scene>` + `<embedScene>` color groups + `<shape>` + `<transform>` + `<fillColor>` + `<path>`. Output sengaja tidak menulis `<path-stroke>`.
+Converter SVG ke XML scene Alight Motion dengan dua jalur utama: `lossless`/Maximum Fidelity untuk mempertahankan struktur visual sebanyak mungkin, dan `optimized` untuk hasil yang lebih ringan di HP.
 
 ## Fokus converter
 
 - Warna SVG dikonversi ke format Alight Motion `#AARRGGBB`.
-- Mendukung path, rect, circle, ellipse, line, polygon, polyline, group transform, `<use>` dan CSS sederhana.
-- Semua fill dengan warna ARGB identik digabung menjadi satu color group.
-- Stroke sengaja dibuang; stroke-only element dilewati.
-- Gradient diratakan menjadi satu warna representatif agar satu group hanya memiliki satu warna.
+- Mendukung path, rect, circle, ellipse, line, polygon, polyline, nested viewport, transform, `<use>`, CSS selector kompleks, custom property/`var()`, dan `!important`.
+- Maximum Fidelity mempertahankan z-order, shape, native stroke, gradient dua warna, dan `clipPath` geometris sebagai mask Alight Motion.
+- Mode grouped menggabungkan fill ARGB identik; mode ini memang dapat membuang stroke atau meratakan gradient sesuai profil.
 - Arc diubah menjadi cubic Bézier. Node contour kompleks dikurangi secara adaptif dengan perlindungan primitive dan sudut tajam.
 - Mode `accurate`, `balanced`, dan `lightweight` mengontrol tingkat pengurangan node tanpa mengubah prinsip 1 warna = 1 group.
 
@@ -114,7 +113,7 @@ Untuk website Vercel lain, lihat `examples/vercel-server-proxy.js`.
 
 ## Arti opsi
 
-- `quality`: `accurate` (default), `balanced`, atau `lightweight`.
+- `quality`: `lossless` (Maximum Fidelity), `optimized`, `accurate` (default API kompatibilitas), `balanced`, atau `lightweight`.
 - `maxShapes`: default Accurate `2500`; bisa dinaikkan hingga `5000`.
 - `minAreaPercent`: default Accurate `0`, sehingga detail kecil tidak dibuang.
 - `precision`: default Accurate `5`; rentang `0–6`.
@@ -123,7 +122,7 @@ Untuk website Vercel lain, lihat `examples/vercel-server-proxy.js`.
 
 ## Batas format
 
-SVG `text`, bitmap `<image>`, filter kompleks, pattern fill, dan clip/mask kompleks tidak dapat dipetakan 1:1 ke schema path Alight Motion yang digunakan. Converter akan mempertahankan bentuk vector utama dan mengembalikan warning bila menemukan kasus tersebut. Gradient dengan lebih dari dua stop disederhanakan menjadi warna awal dan akhir karena XML referensi memakai pasangan `startColor`/`endColor`.
+SVG `text`, bitmap `<image>`, filter kompleks, pattern fill, mask luminance/alpha, marker, dash stroke, dan gradient dengan lebih dari dua stop belum dapat dipetakan 1:1 ke schema yang tervalidasi. `clipPath` geometris sudah dipetakan ke native mask pada Maximum Fidelity. Response selalu membawa `fidelity.exact`, `fidelity.status`, dan daftar `fidelity.losses`; UI tidak mengklaim hasil identik bila audit menemukan fitur yang turun kualitas.
 
 ## Push dari Termux ke GitHub
 
@@ -202,7 +201,7 @@ Output Alight Motion sekarang diubah mengikuti workflow editing yang lebih prakt
 
 Catatan penting: grouping global per warna dapat mengubah urutan tumpukan bila warna yang sama tersebar di beberapa posisi z-order. Engine mengurutkan group berdasarkan rata-rata posisi sumber untuk meminimalkan perubahan tersebut. Jika fidelity z-order absolut lebih penting daripada satu-group-per-warna, gunakan strategi grouping per-run pada versi lanjutan.
 
-## v1.5.0 — Lossless / 100% Akurat
+## v1.5.0 — Lossless geometry (nama historis)
 
 Mode baru `quality: "lossless"` ditambahkan tanpa mengubah behavior tiga mode grouped lama.
 
@@ -320,3 +319,13 @@ Contoh API:
   }
 }
 ```
+
+## v1.8.0 — Maximum Fidelity + native clipPath
+
+- UI menjadikan Maximum Fidelity sebagai default dan mengganti klaim “100% Akurat” dengan audit fidelity yang dapat diverifikasi.
+- `clipPath` geometris, termasuk yang diwariskan dari `<g>`, diisolasi per shape lalu ditulis sebagai layer `blending="mask"` agar z-order lain tidak ikut terpotong.
+- Menangani `clipPathUnits="objectBoundingBox"`, transform, primitive, path, dan `<use>` di dalam clipPath.
+- CSS memakai selector engine penuh untuk child/sibling/attribute/static pseudo selector, cascade `!important`, serta custom property `var()`.
+- Unit `in`, `cm`, `mm`, `q`, `pt`, `pc`, `px` dan geometri persen dihitung terhadap viewport/viewBox yang tepat.
+- Style class/CSS pada gradient stop kini dipertahankan.
+- API menambahkan `fidelity` dan statistik loss spesifik: clip, mask, filter, pattern, marker, dash, cap, shape hilang, serta bbox mismatch.
