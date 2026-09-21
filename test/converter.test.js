@@ -25,6 +25,44 @@ test('old engine names are removed and safely fall back to Maximum Fidelity', ()
   }
 });
 
+test('Color Groups converts 100 flat-color shapes with 10 colors into 10 layers', () => {
+  const colors = ['#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff','#00ffff','#222222','#777777','#ffaa00','#6633ff'];
+  const shapes = Array.from({ length: 100 }, (_, index) => {
+    const color = colors[index % colors.length];
+    const x = (index % 20) * 5;
+    const y = Math.floor(index / 20) * 10;
+    return `<rect id="shape-${index}" x="${x}" y="${y}" width="4" height="8" fill="${color}"/>`;
+  }).join('');
+  const svg = `<svg width="100" height="50" xmlns="http://www.w3.org/2000/svg">${shapes}</svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'color-groups' });
+
+  assert.equal(out.profile.quality, 'color-group');
+  assert.equal(out.profile.engine, 'color-groups');
+  assert.equal(out.profile.groupedByColor, true);
+  assert.equal(out.grouping.inputShapes, 100);
+  assert.equal(out.grouping.groupedColors, 10);
+  assert.equal(out.grouping.outputLayers, 10);
+  assert.equal(out.grouping.mergedShapes, 90);
+  assert.equal(out.stats.outputShapes, 10);
+  assert.equal((out.xml.match(/label="Color \d{2} · #[0-9a-f]{6}"/gi) || []).length, 10);
+  assert.ok(out.grouping.zOrderBarriers > 0);
+  assert.ok(out.fidelity.losses.some((loss) => loss.code === 'color-group-merge'));
+  assert.ok(out.fidelity.losses.some((loss) => loss.code === 'color-group-zorder'));
+});
+
+test('Color Groups keeps complex paint as fallback instead of destructive merge', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <rect id="red-a" x="0" y="0" width="20" height="20" fill="#ff0000"/>
+    <rect id="red-b" x="25" y="0" width="20" height="20" fill="#ff0000"/>
+    <path id="stroke-only" d="M0 50L100 50" fill="none" stroke="#ff0000" stroke-width="4"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'color-group' });
+  assert.equal(out.grouping.groupedColors, 1);
+  assert.equal(out.grouping.fallbackLayers, 1);
+  assert.equal(out.grouping.outputLayers, 2);
+  assert.match(out.xml, /<path-stroke/);
+});
+
 test('Small Patch Cleanup removes tiny islands but keeps main silhouette', () => {
   const dots = Array.from({ length: 10 }, (_, i) => {
     const x = 5 + i * 2;

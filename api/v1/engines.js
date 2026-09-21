@@ -1,6 +1,6 @@
 const catalog = {
   ok: true,
-  version: '2.0.0',
+  version: '2.1.0',
   engines: [
     {
       id: 'maximum-fidelity',
@@ -8,6 +8,13 @@ const catalog = {
       aliases: ['lossless', 'maximum'],
       description: 'Strict fidelity pipeline: source order, native stroke, gradient, clipPath and group opacity preserved.',
       options: ['title', 'duration', 'fps', 'groupingMode', 'detectPrimitives', 'validateBounds', 'requireExact']
+    },
+    {
+      id: 'color-groups',
+      quality: 'color-group',
+      aliases: ['color-group', 'group-by-color', 'color-fidelity'],
+      description: 'Maximum Fidelity geometry parsing plus exact solid-fill grouping: 100 shapes with 10 solid colors become 10 color layers when the SVG is flat-color compatible.',
+      options: ['title', 'duration', 'fps']
     },
     {
       id: 'small-patch-cleanup',
