@@ -1,6 +1,6 @@
 const catalog = {
   ok: true,
-  version: '2.0.0',
+  version: '2.1.0',
   engines: [
     {
       id: 'maximum-fidelity',
@@ -15,6 +15,13 @@ const catalog = {
       aliases: ['patch-clean', 'small-patch'],
       description: 'Maximum Fidelity pipeline plus aggressive compact micro-patch removal; elongated thin details remain protected; no grouping or node reduction.',
       options: ['title', 'duration', 'fps', 'groupingMode', 'detectPrimitives', 'patchAreaPercent', 'protectThinPercent']
+    },
+    {
+      id: 'color-groups',
+      quality: 'color-groups',
+      aliases: ['color-group', 'group-by-color', 'color-layers'],
+      description: 'Maximum Fidelity geometry parser followed by exact-paint grouping: repeated solid colors collapse into one XML layer per color/style.',
+      options: ['title', 'duration', 'fps']
     }
   ],
   controls: {
