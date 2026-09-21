@@ -12,7 +12,7 @@
     <header>
       <p class="eyebrow">SVG → XML · ENGINE v2.0</p>
       <h1>Alight Motion Converter</h1>
-      <p class="sub">Dua engine saja: Maximum Fidelity untuk hasil strict, dan Small Patch Cleanup untuk menghapus patch/island SVG yang sangat kecil tanpa merge warna, tanpa node reduction, dan tanpa menghapus stroke.</p>
+      <p class="sub">Tiga engine: Maximum Fidelity untuk hasil strict, Color Groups untuk menjadikan satu warna solid sebagai satu layer, dan Small Patch Cleanup untuk menghapus patch/island SVG kecil.</p>
     </header>
 
     <section class="card">
@@ -28,6 +28,7 @@
           <span>Engine</span>
           <select id="quality">
             <option value="lossless" selected>Maximum Fidelity — strict</option>
+            <option value="color-group">Color Groups — 1 warna = 1 layer</option>
             <option value="patch-clean">Small Patch Cleanup — hapus patch kecil saja</option>
           </select>
         </label>
@@ -46,6 +47,7 @@
           </label>
         </div>
         <p id="losslessNote" class="mini">Maximum Fidelity: z-order asli, native stroke, gradient, clipPath, group opacity, presisi 8, tanpa grouping dan tanpa node reduction. Output ditolak jika strict audit menemukan loss yang diketahui.</p>
+        <p id="colorGroupNote" class="mini hidden">Color Groups memakai parser geometri Maximum Fidelity, lalu menggabungkan semua path dengan fill solid identik menjadi satu layer warna. Contoh: 100 shape dengan 10 warna solid → 10 layer warna dalam satu group. Layer kompleks seperti gradient/stroke/clip tetap dipisah agar tidak rusak.</p>
         <p id="patchNote" class="mini hidden">Small Patch Cleanup memakai pipeline Maximum Fidelity yang sama dengan ambang default lebih agresif. Patch compact kecil dibuang lebih cepat, sementara detail yang benar-benar panjang dan tipis tetap dilindungi.</p>
       </details>
 
@@ -73,7 +75,7 @@
       <p class="eyebrow">ENGINE API v2</p>
       <code>GET /api/v1/engines</code>
       <p class="mini">Daftar engine publik dan bisa dibaca dari website mana pun.</p>
-      <code>GET /api/v1/convert?engine=small-patch-cleanup&amp;svg=...</code>
+      <code>GET /api/v1/convert?engine=color-groups&amp;svg=...</code>
       <p class="mini">GET conversion untuk SVG kecil. Header <code>x-api-key</code> tetap wajib. Tambahkan <code>&amp;raw=1</code> untuk XML langsung.</p>
       <code>POST /api/v1/convert</code>
       <p class="mini">Disarankan untuk SVG besar. Body: <code>{ "svg": "&lt;svg...&gt;", "options": { "quality": "maximum-fidelity" } }</code></p>
