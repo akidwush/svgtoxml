@@ -38,15 +38,15 @@
         <div class="grid">
           <label>
             <span>Ambang patch kecil (%)</span>
-            <input id="patchAreaPercent" type="number" min="0" max="0.25" step="0.0001" value="0.002" />
+            <input id="patchAreaPercent" type="number" min="0" max="0.25" step="0.0001" value="0.01" />
           </label>
           <label>
             <span>Lindungi detail panjang (%)</span>
-            <input id="protectThinPercent" type="number" min="0" max="100" step="0.1" value="3.5" />
+            <input id="protectThinPercent" type="number" min="0" max="100" step="0.1" value="2.0" />
           </label>
         </div>
         <p id="losslessNote" class="mini">Maximum Fidelity: z-order asli, native stroke, gradient, clipPath, group opacity, presisi 8, tanpa grouping dan tanpa node reduction. Output ditolak jika strict audit menemukan loss yang diketahui.</p>
-        <p id="patchNote" class="mini hidden">Small Patch Cleanup memakai pipeline Maximum Fidelity yang sama, lalu hanya membuang island/subpath di bawah ambang patch. Bentuk tipis yang cukup panjang dilindungi agar garis penting tidak ikut hilang.</p>
+        <p id="patchNote" class="mini hidden">Small Patch Cleanup memakai pipeline Maximum Fidelity yang sama dengan ambang default lebih agresif. Patch compact kecil dibuang lebih cepat, sementara detail yang benar-benar panjang dan tipis tetap dilindungi.</p>
       </details>
 
       <button id="convertBtn" type="button">Konversi ke XML</button>
