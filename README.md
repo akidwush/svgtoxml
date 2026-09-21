@@ -68,6 +68,18 @@ Small Patch Cleanup:
 - `lossless`, `maximum-fidelity`, `maximum` → Maximum Fidelity.
 - `patch-clean`, `small-patch`, `small-patch-cleanup` → Small Patch Cleanup.
 
+
+## Control Surface v2
+
+Kedua engine menerima kontrol export berikut melalui `options`:
+
+- `duration` (ms)
+- `fps`
+- `groupingMode`: `nested` atau `flat`
+- `detectPrimitives`: boolean
+
+Primitive detection bersifat konservatif: hanya shape sederhana yang aman dipetakan ke primitive native Alight Motion; bentuk lain otomatis fallback ke path agar visual tetap diprioritaskan.
+
 ## API key
 
 Website resmi memakai `POST /api/convert` secara same-origin tanpa mengekspos secret.
