@@ -25,6 +25,37 @@ test('old engine names are removed and safely fall back to Maximum Fidelity', ()
   }
 });
 
+test('Color Groups collapses 100 solid shapes with 10 colors into 10 layers', () => {
+  const palette = ['#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff','#00ffff','#111111','#777777','#ff8800','#8844ff'];
+  const rects = Array.from({ length: 100 }, (_, i) => {
+    const x = (i % 10) * 10;
+    const y = Math.floor(i / 10) * 10;
+    return `<rect id="r${i}" x="${x}" y="${y}" width="8" height="8" fill="${palette[i % palette.length]}"/>`;
+  }).join('');
+  const svg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'color-groups' });
+
+  assert.equal(out.profile.quality, 'color-groups');
+  assert.equal(out.profile.engine, 'color-groups');
+  assert.equal(out.profile.groupedByColor, true);
+  assert.equal(out.colorGrouping.sourceShapes, 100);
+  assert.equal(out.colorGrouping.colorLayers, 10);
+  assert.equal(out.stats.colorGroups, 10);
+  assert.equal(out.stats.outputShapes, 10);
+  assert.equal(out.stats.mergedShapes, 90);
+  assert.match(out.xml, /SVG Color Groups/);
+  assert.equal((out.xml.match(/<shape\b/g) || []).length, 10);
+});
+
+test('Color Groups aliases resolve to the same engine', () => {
+  const svg = '<svg width="10" height="10"><rect width="10" height="10" fill="red"/></svg>';
+  for (const quality of ['color-group', 'group-by-color', 'color-layers']) {
+    const out = convertSvgToAlightXml(svg, { quality });
+    assert.equal(out.profile.quality, 'color-groups');
+    assert.equal(out.stats.outputShapes, 1);
+  }
+});
+
 test('Small Patch Cleanup removes tiny islands but keeps main silhouette', () => {
   const dots = Array.from({ length: 10 }, (_, i) => {
     const x = 5 + i * 2;
