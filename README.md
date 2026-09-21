@@ -1,9 +1,10 @@
 # SVG → Alight Motion XML v2
 
-Engine SVG ke XML Alight Motion sekarang hanya memiliki **dua mode**:
+Engine SVG ke XML Alight Motion sekarang memiliki **tiga mode**:
 
 1. **Maximum Fidelity** — pipeline strict yang mempertahankan z-order, native stroke, gradient, clipPath geometris, group opacity, dan presisi tinggi.
-2. **Small Patch Cleanup** — memakai pipeline Maximum Fidelity yang sama, lalu hanya membuang island/subpath SVG yang sangat kecil. Tidak ada color grouping, node reduction, atau penghapusan stroke.
+2. **Small Patch Cleanup** — memakai pipeline Maximum Fidelity yang sama, lalu hanya membuang island/subpath SVG yang sangat kecil.
+3. **Color Groups** — memakai parser geometri Maximum Fidelity, lalu menggabungkan shape dengan paint identik. Untuk SVG solid sederhana, 100 shape dengan 10 warna dapat menjadi 10 layer warna di dalam satu group XML.
 
 Engine lama `optimized`, `accurate`, `balanced`, dan `lightweight` tidak lagi tersedia sebagai mode eksekusi. Nilai quality lama/asing akan fallback ke Maximum Fidelity.
 
@@ -63,15 +64,29 @@ Small Patch Cleanup:
 }
 ```
 
+Color Groups:
+
+```json
+{
+  "svg": "<svg>...</svg>",
+  "options": {
+    "quality": "color-groups"
+  }
+}
+```
+
+Color Groups hanya menggabungkan paint yang aman dan identik. Gradient, clipPath, dan shape transparan yang berisiko mengubah compositing tetap diisolasi. Jika warna yang sama muncul berselang-seling pada z-order asli, response mengembalikan `colorGrouping.zOrderBarriers` sebagai warning audit.
+
 ### Engine IDs dan alias
 
 - `lossless`, `maximum-fidelity`, `maximum` → Maximum Fidelity.
 - `patch-clean`, `small-patch`, `small-patch-cleanup` → Small Patch Cleanup.
+- `color-groups`, `color-group`, `group-by-color`, `color-layers` → Color Groups.
 
 
-## Control Surface v2
+## Control Surface v2.1
 
-Kedua engine menerima kontrol export berikut melalui `options`:
+Maximum Fidelity dan Small Patch Cleanup menerima kontrol export berikut melalui `options`:
 
 - `duration` (ms)
 - `fps`
@@ -122,3 +137,5 @@ npx vercel dev
 Maximum Fidelity dapat menolak output dengan HTTP `422 FIDELITY_REQUIREMENT_FAILED` jika `requireExact: true` dan audit menemukan fitur SVG yang belum punya mapping 1:1.
 
 Small Patch Cleanup secara sengaja menandai fidelity sebagai degraded bila ada patch yang benar-benar dibuang, dan mengembalikan statistik `cleanup.removedSubpaths`, `cleanup.removedShapes`, dan `cleanup.removedNodes`.
+
+Color Groups mengembalikan `colorGrouping.sourceShapes`, `colorGrouping.colorLayers`, `colorGrouping.mergedShapes`, dan `colorGrouping.zOrderBarriers`. Tujuan engine ini adalah struktur layer ringkas: satu paint solid identik menjadi satu layer bila aman digabung.
