@@ -10,9 +10,9 @@
 <body>
   <main class="shell">
     <header>
-      <p class="eyebrow">SVG → XML · ENGINE v2.0</p>
+      <p class="eyebrow">SVG → XML · ENGINE v2.1</p>
       <h1>Alight Motion Converter</h1>
-      <p class="sub">Dua engine saja: Maximum Fidelity untuk hasil strict, dan Small Patch Cleanup untuk menghapus patch/island SVG yang sangat kecil tanpa merge warna, tanpa node reduction, dan tanpa menghapus stroke.</p>
+      <p class="sub">Tiga engine: Maximum Fidelity untuk hasil strict, Small Patch Cleanup untuk membuang patch mikro, dan Color Groups untuk menggabungkan shape dengan warna/paint identik menjadi layer warna yang ringkas.</p>
     </header>
 
     <section class="card">
@@ -29,6 +29,7 @@
           <select id="quality">
             <option value="lossless" selected>Maximum Fidelity — strict</option>
             <option value="patch-clean">Small Patch Cleanup — hapus patch kecil saja</option>
+            <option value="color-groups">Color Groups — 1 warna = 1 layer</option>
           </select>
         </label>
       </div>
@@ -47,6 +48,7 @@
         </div>
         <p id="losslessNote" class="mini">Maximum Fidelity: z-order asli, native stroke, gradient, clipPath, group opacity, presisi 8, tanpa grouping dan tanpa node reduction. Output ditolak jika strict audit menemukan loss yang diketahui.</p>
         <p id="patchNote" class="mini hidden">Small Patch Cleanup memakai pipeline Maximum Fidelity yang sama dengan ambang default lebih agresif. Patch compact kecil dibuang lebih cepat, sementara detail yang benar-benar panjang dan tipis tetap dilindungi.</p>
+        <p id="colorNote" class="mini hidden">Color Groups memakai parser geometri Maximum Fidelity, lalu menggabungkan shape solid dengan paint identik. Contoh: 100 shape dengan 10 warna solid dapat menjadi 10 layer warna di dalam satu group XML.</p>
       </details>
 
       <button id="convertBtn" type="button">Konversi ke XML</button>
@@ -79,6 +81,6 @@
       <p class="mini">Disarankan untuk SVG besar. Body: <code>{ "svg": "&lt;svg...&gt;", "options": { "quality": "maximum-fidelity" } }</code></p>
     </section>
   </main>
-  <script type="module" src="/app.js?v=2.0.0"></script>
+  <script type="module" src="/app.js?v=2.1.0"></script>
 </body>
 </html>
