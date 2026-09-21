@@ -19,18 +19,21 @@ let fileReadPromise = null;
 
 const PRESETS = {
   lossless: { patchAreaPercent: 0.01, protectThinPercent: 2.0 },
-  'patch-clean': { patchAreaPercent: 0.01, protectThinPercent: 2.0 }
+  'patch-clean': { patchAreaPercent: 0.01, protectThinPercent: 2.0 },
+  'color-groups': { patchAreaPercent: 0.01, protectThinPercent: 2.0 }
 };
 
 function applyPreset(name) {
   const preset = PRESETS[name] || PRESETS.lossless;
   const patchMode = name === 'patch-clean';
+  const colorMode = name === 'color-groups';
   $('patchAreaPercent').value = preset.patchAreaPercent;
   $('protectThinPercent').value = preset.protectThinPercent;
   $('patchAreaPercent').disabled = !patchMode;
   $('protectThinPercent').disabled = !patchMode;
-  $('losslessNote').classList.toggle('hidden', patchMode);
+  $('losslessNote').classList.toggle('hidden', patchMode || colorMode);
   $('patchNote').classList.toggle('hidden', !patchMode);
+  $('colorNote').classList.toggle('hidden', !colorMode);
 }
 
 quality.addEventListener('change', () => applyPreset(quality.value));
@@ -168,6 +171,7 @@ convertBtn.addEventListener('click', async () => {
     xmlOutput.value = data.xml;
 
     const patchMode = data.profile?.quality === 'patch-clean';
+    const colorMode = data.profile?.quality === 'color-groups';
     const fidelityExact = data.fidelity?.exact === true;
     const fidelityLosses = data.fidelity?.losses?.length || 0;
 
@@ -176,6 +180,13 @@ convertBtn.addEventListener('click', async () => {
       stat('Patch/subpath dibuang', data.cleanup?.removedSubpaths ?? 0),
       stat('Shape mikro dibuang', data.cleanup?.removedShapes ?? 0),
       stat('Node', `${data.stats.nodesBefore ?? 0} → ${data.stats.nodesAfter ?? 0}`),
+      stat('Stroke native', data.stats.strokes ?? 0),
+      stat('Ukuran XML', `${((data.stats.outputBytes || 0) / 1024).toFixed(1)} KB`)
+    ].join('') : colorMode ? [
+      stat('Shape sumber', data.colorGrouping?.sourceShapes ?? data.stats.groupedSourceShapes ?? 0),
+      stat('Layer warna', data.colorGrouping?.colorLayers ?? data.stats.colorGroups ?? 0),
+      stat('Shape digabung', data.colorGrouping?.mergedShapes ?? data.stats.mergedShapes ?? 0),
+      stat('Z-order barrier', data.colorGrouping?.zOrderBarriers ?? data.stats.zOrderBarriers ?? 0),
       stat('Stroke native', data.stats.strokes ?? 0),
       stat('Ukuran XML', `${((data.stats.outputBytes || 0) / 1024).toFixed(1)} KB`)
     ].join('') : [
@@ -188,11 +199,13 @@ convertBtn.addEventListener('click', async () => {
       stat('Ukuran XML', `${((data.stats.outputBytes || 0) / 1024).toFixed(1)} KB`)
     ].join('');
 
-    const fidelityMessage = !patchMode
+    const fidelityMessage = !patchMode && !colorMode
       ? [fidelityExact
           ? '✓ Audit fidelity: tidak ada kehilangan fitur yang diketahui.'
           : `⚠ Audit fidelity menemukan ${fidelityLosses} jenis perbedaan.`]
-      : [];
+      : colorMode && fidelityLosses
+        ? [`⚠ Color Groups mencatat ${fidelityLosses} konsekuensi grouping/fidelity.`]
+        : [];
 
     warningsEl.innerHTML = [...fidelityMessage, ...(data.warnings || []).map((w) => `⚠ ${w}`)]
       .map(escapeHtml)
@@ -200,12 +213,16 @@ convertBtn.addEventListener('click', async () => {
 
     $('resultTitle').textContent = patchMode
       ? `${data.width}×${data.height} · ${data.stats.outputShapes} shape · Small Patch Cleanup`
-      : `${data.width}×${data.height} · ${data.stats.outputShapes} shape · Maximum Fidelity`;
+      : colorMode
+        ? `${data.width}×${data.height} · ${data.colorGrouping?.colorLayers || data.stats.colorGroups || 0} layer · Color Groups`
+        : `${data.width}×${data.height} · ${data.stats.outputShapes} shape · Maximum Fidelity`;
 
     resultCard.classList.remove('hidden');
 
     if (patchMode) {
       status.textContent = `Selesai · ${data.cleanup?.removedSubpaths || 0} subpath kecil + ${data.cleanup?.removedShapes || 0} shape mikro dibuang · z-order/stroke tetap dipertahankan.`;
+    } else if (colorMode) {
+      status.textContent = `Selesai · ${data.colorGrouping?.sourceShapes || 0} shape → ${data.colorGrouping?.colorLayers || 0} layer warna.`;
     } else {
       status.textContent = `Selesai · ${data.stats.outputShapes} shape · Maximum Fidelity strict.`;
     }
