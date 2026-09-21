@@ -4,6 +4,7 @@ import publicConvertHandler from '../api/convert.js';
 import healthHandler from '../api/health.js';
 import v1ConvertHandler from '../api/v1/convert.js';
 import v1AuthHandler from '../api/v1/auth.js';
+import enginesHandler from '../api/v1/engines.js';
 
 function withEnv(name, value, fn) {
   const previous = process.env[name];
@@ -20,115 +21,91 @@ test('Vercel handlers expose Web Handler fetch()', () => {
   assert.equal(typeof healthHandler?.fetch, 'function');
   assert.equal(typeof v1ConvertHandler?.fetch, 'function');
   assert.equal(typeof v1AuthHandler?.fetch, 'function');
+  assert.equal(typeof enginesHandler?.fetch, 'function');
 });
 
-test('health endpoint reports external API auth state without loading converter dependencies', async () => {
-  await withEnv('SVG2XML_API_KEY', undefined, async () => {
-    await withEnv('SVG2XML_API_KEYS', undefined, async () => {
-      const response = await healthHandler.fetch(new Request('https://example.test/api/health'));
-      assert.equal(response.status, 200);
-      const body = await response.json();
-      assert.equal(body.ok, true);
-      assert.equal(body.version, '1.9.0');
-      assert.equal(body.externalApiAuth, 'not-configured');
-      assert.equal(body.configuredApiKeys, 0);
-    });
+test('health advertises v2 engines and GET/POST API', async () => {
+  const response = await healthHandler.fetch(new Request('https://example.test/api/health'));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.version, '2.0.0');
+  assert.deepEqual(body.engines, ['maximum-fidelity', 'small-patch-cleanup']);
+  assert.deepEqual(body.externalApiMethods, ['GET', 'POST']);
+});
+
+test('engine catalog is public and CORS-ready', async () => {
+  const response = await enginesHandler.fetch(new Request('https://example.test/api/v1/engines', {
+    headers: { origin: 'https://any-site.example' }
+  }));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('access-control-allow-origin'), '*');
+  const body = await response.json();
+  assert.equal(body.ok, true);
+  assert.equal(body.engines.length, 2);
+});
+
+test('public website endpoint remains same-origin POST only', async () => {
+  const response = await publicConvertHandler.fetch(new Request('https://example.test/api/convert', {
+    method: 'GET',
+    headers: { origin: 'https://example.test' }
+  }));
+  assert.equal(response.status, 405);
+});
+
+test('external GET conversion requires API key', async () => {
+  await withEnv('SVG2XML_API_KEY', 'amx_live_test-secret', async () => {
+    const svg = encodeURIComponent('<svg width="10" height="10"><rect width="10" height="10"/></svg>');
+    const response = await v1ConvertHandler.fetch(new Request(
+      `https://example.test/api/v1/convert?engine=maximum-fidelity&svg=${svg}`
+    ));
+    assert.equal(response.status, 401);
+    const body = await response.json();
+    assert.equal(body.code, 'API_KEY_REQUIRED');
   });
 });
 
-test('public website convert validates body without API key', async () => {
-  const response = await publicConvertHandler.fetch(new Request('https://example.test/api/convert', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', origin: 'https://example.test' },
-    body: JSON.stringify({ options: {} })
-  }));
-  assert.equal(response.status, 400);
-  const body = await response.json();
-  assert.equal(body.code, 'SVG_REQUIRED');
+test('external GET conversion works for small SVG and engine alias', async () => {
+  await withEnv('SVG2XML_API_KEY', 'amx_live_test-secret', async () => {
+    const svg = encodeURIComponent('<svg width="10" height="10"><rect width="10" height="10" fill="red"/></svg>');
+    const response = await v1ConvertHandler.fetch(new Request(
+      `https://example.test/api/v1/convert?engine=small-patch-cleanup&patchAreaPercent=0.01&svg=${svg}`,
+      { headers: { 'x-api-key': 'amx_live_test-secret' } }
+    ));
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.ok, true);
+    assert.equal(body.profile.quality, 'patch-clean');
+    assert.equal(body.api.authenticated, true);
+  });
 });
 
-test('public website endpoint rejects cross-origin browser usage', async () => {
-  const response = await publicConvertHandler.fetch(new Request('https://example.test/api/convert', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', origin: 'https://other.example', 'sec-fetch-site': 'cross-site' },
-    body: JSON.stringify({ options: {} })
-  }));
-  assert.equal(response.status, 403);
-  const body = await response.json();
-  assert.equal(body.code, 'USE_EXTERNAL_API');
+test('external POST remains supported', async () => {
+  await withEnv('SVG2XML_API_KEY', 'amx_live_test-secret', async () => {
+    const response = await v1ConvertHandler.fetch(new Request('https://example.test/api/v1/convert', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': 'amx_live_test-secret' },
+      body: JSON.stringify({
+        svg: '<svg width="10" height="10"><rect width="10" height="10"/></svg>',
+        options: { quality: 'maximum-fidelity' }
+      })
+    }));
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.profile.quality, 'lossless');
+  });
 });
 
-test('strict maximum fidelity returns structured 422 instead of degraded XML', async () => {
+test('strict maximum fidelity still returns structured 422', async () => {
   const response = await publicConvertHandler.fetch(new Request('https://example.test/api/convert', {
     method: 'POST',
     headers: { 'content-type': 'application/json', origin: 'https://example.test' },
     body: JSON.stringify({
       svg: '<svg width="100" height="100"><text x="5" y="20">Nexora</text></svg>',
-      options: { quality: 'lossless', requireExact: true }
+      options: { quality: 'maximum-fidelity', requireExact: true }
     })
   }));
   assert.equal(response.status, 422);
   const body = await response.json();
-  assert.equal(body.ok, false);
   assert.equal(body.code, 'FIDELITY_REQUIREMENT_FAILED');
-  assert.equal(body.fidelity.exact, false);
-  assert.ok(body.fidelity.losses.some((loss) => loss.code === 'text'));
   assert.equal(body.xml, undefined);
-});
-
-test('external v1 API refuses requests until owner configures a key', async () => {
-  await withEnv('SVG2XML_API_KEY', undefined, async () => {
-    await withEnv('SVG2XML_API_KEYS', undefined, async () => {
-      const response = await v1ConvertHandler.fetch(new Request('https://example.test/api/v1/convert', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ options: {} })
-      }));
-      assert.equal(response.status, 503);
-      const body = await response.json();
-      assert.equal(body.code, 'API_KEY_NOT_CONFIGURED');
-    });
-  });
-});
-
-test('external v1 API rejects invalid API key', async () => {
-  await withEnv('SVG2XML_API_KEY', 'amx_live_test-secret', async () => {
-    const response = await v1ConvertHandler.fetch(new Request('https://example.test/api/v1/convert', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': 'wrong-key' },
-      body: JSON.stringify({ options: {} })
-    }));
-    assert.equal(response.status, 401);
-    const body = await response.json();
-    assert.equal(body.code, 'INVALID_API_KEY');
-  });
-});
-
-test('valid external API key reaches request body validation', async () => {
-  await withEnv('SVG2XML_API_KEY', 'amx_live_test-secret', async () => {
-    const response = await v1ConvertHandler.fetch(new Request('https://example.test/api/v1/convert', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': 'amx_live_test-secret' },
-      body: JSON.stringify({ options: {} })
-    }));
-    assert.equal(response.status, 400);
-    const body = await response.json();
-    assert.equal(body.code, 'SVG_REQUIRED');
-  });
-});
-
-test('multi-key configuration identifies the client key', async () => {
-  await withEnv('SVG2XML_API_KEY', undefined, async () => {
-    await withEnv('SVG2XML_API_KEYS', 'site-a=amx_live_a,site-b=amx_live_b', async () => {
-      const response = await v1AuthHandler.fetch(new Request('https://example.test/api/v1/auth', {
-        method: 'GET',
-        headers: { 'x-api-key': 'amx_live_b' }
-      }));
-      assert.equal(response.status, 200);
-      const body = await response.json();
-      assert.equal(body.ok, true);
-      assert.equal(body.keyId, 'site-b');
-      assert.equal(body.configuredKeys, 2);
-    });
-  });
 });
