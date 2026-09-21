@@ -10,6 +10,7 @@ const statsEl = $('stats');
 const warningsEl = $('warnings');
 const downloadBtn = $('downloadBtn');
 const quality = $('quality');
+
 let lastXml = '';
 let lastBaseName = 'alight-motion';
 let selectedSvgText = '';
@@ -17,30 +18,19 @@ let selectedFileSignature = '';
 let fileReadPromise = null;
 
 const PRESETS = {
-  optimized: { maxShapes: 3000, minAreaPercent: 0.0004, precision: 4, nodeReduction: 38, microDetailPercent: 0.0015, maxOutputGroups: 320 },
-  lossless: { maxShapes: 5000, minAreaPercent: 0, precision: 8, nodeReduction: 0, microDetailPercent: 0, maxOutputGroups: 1200 },
-  accurate: { maxShapes: 5000, minAreaPercent: 0, precision: 5, nodeReduction: 35, microDetailPercent: 0, maxOutputGroups: 1200 },
-  balanced: { maxShapes: 2500, minAreaPercent: 0.0002, precision: 4, nodeReduction: 50, microDetailPercent: 0, maxOutputGroups: 1200 },
-  lightweight: { maxShapes: 1000, minAreaPercent: 0.001, precision: 3, nodeReduction: 65, microDetailPercent: 0, maxOutputGroups: 1200 }
+  lossless: { patchAreaPercent: 0.002, protectThinPercent: 3.5 },
+  'patch-clean': { patchAreaPercent: 0.002, protectThinPercent: 3.5 }
 };
 
 function applyPreset(name) {
-  const p = PRESETS[name] || PRESETS.optimized;
-  const isLossless = name === 'lossless';
-  const isOptimized = name === 'optimized';
-  $('maxShapes').value = p.maxShapes;
-  $('minArea').value = p.minAreaPercent;
-  $('precision').value = p.precision;
-  $('nodeReduction').value = p.nodeReduction;
-  $('microDetailPercent').value = p.microDetailPercent ?? 0;
-  $('maxOutputGroups').value = p.maxOutputGroups ?? 1200;
-  for (const id of ['maxShapes', 'minArea', 'precision', 'nodeReduction']) $(id).disabled = isLossless;
-  $('microDetailPercent').disabled = !isOptimized;
-  $('maxOutputGroups').disabled = !isOptimized;
-  const note = $('losslessNote');
-  if (note) note.classList.toggle('hidden', !isLossless);
-  const optimizedNote = $('optimizedNote');
-  if (optimizedNote) optimizedNote.classList.toggle('hidden', !isOptimized);
+  const preset = PRESETS[name] || PRESETS.lossless;
+  const patchMode = name === 'patch-clean';
+  $('patchAreaPercent').value = preset.patchAreaPercent;
+  $('protectThinPercent').value = preset.protectThinPercent;
+  $('patchAreaPercent').disabled = !patchMode;
+  $('protectThinPercent').disabled = !patchMode;
+  $('losslessNote').classList.toggle('hidden', patchMode);
+  $('patchNote').classList.toggle('hidden', !patchMode);
 }
 
 quality.addEventListener('change', () => applyPreset(quality.value));
@@ -53,9 +43,6 @@ function fileSignature(file) {
 
 function readFileAsText(file) {
   if (!file) return Promise.reject(new Error('File SVG tidak tersedia.'));
-  // Android/Chrome can revoke the underlying file reference after the picker
-  // closes. Read it immediately and keep the SVG source in memory instead of
-  // calling file.text() again when the user presses Convert.
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ''));
@@ -73,8 +60,8 @@ function analyzeSvgText(text) {
 }
 
 fileInput.addEventListener('change', () => {
-  const f = fileInput.files?.[0];
-  fileName.textContent = f ? `${f.name} · ${(f.size / 1024).toFixed(1)} KB` : 'Belum ada file';
+  const file = fileInput.files?.[0];
+  fileName.textContent = file ? `${file.name} · ${(file.size / 1024).toFixed(1)} KB` : 'Belum ada file';
   fileMeta.textContent = '';
   selectedSvgText = '';
   selectedFileSignature = '';
@@ -82,18 +69,18 @@ fileInput.addEventListener('change', () => {
   lastXml = '';
   resultCard.classList.add('hidden');
 
-  if (!f) {
+  if (!file) {
     status.textContent = '';
     return;
   }
 
-  lastBaseName = f.name.replace(/\.svg$/i, '') || 'alight-motion';
-  const signature = fileSignature(f);
+  lastBaseName = file.name.replace(/\.svg$/i, '') || 'alight-motion';
+  const signature = fileSignature(file);
   convertBtn.disabled = true;
   fileMeta.textContent = 'Membaca SVG…';
   status.textContent = 'Menyiapkan file SVG…';
 
-  fileReadPromise = readFileAsText(f)
+  fileReadPromise = readFileAsText(file)
     .then((text) => {
       if (!text.trim().startsWith('<') || !/<svg\b/i.test(text)) {
         throw new Error('Isi file tidak terlihat seperti SVG yang valid.');
@@ -104,69 +91,66 @@ fileInput.addEventListener('change', () => {
       status.textContent = 'SVG siap dikonversi.';
       return text;
     })
-    .catch((err) => {
+    .catch((error) => {
       selectedSvgText = '';
       selectedFileSignature = '';
       fileMeta.textContent = 'File gagal dibaca';
-      status.textContent = `Gagal membaca SVG: ${err.message}. Pilih ulang file SVG.`;
-      throw err;
+      status.textContent = `Gagal membaca SVG: ${error.message}. Pilih ulang file SVG.`;
+      return '';
     })
     .finally(() => {
       convertBtn.disabled = false;
     });
 });
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
 function stat(label, value) {
-  return `<div class="stat"><b>${value}</b><span>${label}</span></div>`;
+  return `<div class="stat"><b>${escapeHtml(value)}</b><span>${escapeHtml(label)}</span></div>`;
 }
 
 convertBtn.addEventListener('click', async () => {
   convertBtn.disabled = true;
-  status.textContent = `Mengonversi dengan mode ${quality.options[quality.selectedIndex].text}…`;
+  status.textContent = `Mengonversi dengan ${quality.options[quality.selectedIndex].text}…`;
   resultCard.classList.add('hidden');
+
   try {
     const file = fileInput.files?.[0];
     const signature = fileSignature(file);
 
-    // Prefer the source cached immediately after file selection. This avoids
-    // Android's NotReadableError caused by re-reading a stale File reference.
-    if (fileReadPromise && !selectedSvgText) {
-      try { await fileReadPromise; } catch {}
-    }
+    if (fileReadPromise && !selectedSvgText) await fileReadPromise;
 
     if (!selectedSvgText || (signature && selectedFileSignature && signature !== selectedFileSignature)) {
       if (!file) throw new Error('Pilih SVG terlebih dahulu.');
-      const text = await readFileAsText(file);
-      selectedSvgText = text;
+      selectedSvgText = await readFileAsText(file);
       selectedFileSignature = signature;
     }
 
-    const svg = selectedSvgText;
-    if (!svg) {
-      throw new Error('SVG belum tersimpan di memori. Pilih ulang file SVG lalu coba lagi.');
-    }
+    if (!selectedSvgText) throw new Error('SVG belum tersimpan di memori. Pilih ulang file SVG lalu coba lagi.');
 
     const response = await fetch('/api/convert', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        svg,
+        svg: selectedSvgText,
         options: {
           title: lastBaseName,
           quality: quality.value,
-          maxShapes: Number($('maxShapes').value),
-          minAreaPercent: Number($('minArea').value),
-          precision: Number($('precision').value),
-          nodeReduction: Number($('nodeReduction').value),
-          microDetailPercent: Number($('microDetailPercent').value),
-          maxOutputGroups: Number($('maxOutputGroups').value),
-          groupByColor: quality.value !== 'lossless',
-          removeStrokes: !['lossless', 'optimized'].includes(quality.value),
+          patchAreaPercent: Number($('patchAreaPercent').value),
+          protectThinPercent: Number($('protectThinPercent').value),
           validateBounds: quality.value === 'lossless',
           requireExact: quality.value === 'lossless'
         }
       })
     });
+
     const rawResponse = await response.text();
     let data = {};
     try { data = rawResponse ? JSON.parse(rawResponse) : {}; } catch {}
@@ -174,67 +158,59 @@ convertBtn.addEventListener('click', async () => {
     if (!response.ok || !data.ok) {
       const serverMessage = data.error || rawResponse.trim();
       const code = data.code ? ` [${data.code}]` : '';
-      const detail = data.detail ? ` — ${data.detail}` : '';
-      const fidelityDetail = data.fidelity?.losses?.length
+      const losses = data.fidelity?.losses?.length
         ? ` — loss: ${data.fidelity.losses.map((loss) => loss.code).join(', ')}`
         : '';
-      throw new Error(`${serverMessage || `HTTP ${response.status}`}${code}${detail}${fidelityDetail}`);
+      throw new Error(`${serverMessage || `HTTP ${response.status}`}${code}${losses}`);
     }
 
     lastXml = data.xml;
     xmlOutput.value = data.xml;
-    const isLossless = data.profile?.quality === 'lossless';
-    const isOptimized = data.profile?.quality === 'optimized';
+
+    const patchMode = data.profile?.quality === 'patch-clean';
     const fidelityExact = data.fidelity?.exact === true;
     const fidelityLosses = data.fidelity?.losses?.length || 0;
-    statsEl.innerHTML = isLossless ? [
+
+    statsEl.innerHTML = patchMode ? [
+      stat('Shape output', data.stats.outputShapes ?? 0),
+      stat('Patch/subpath dibuang', data.cleanup?.removedSubpaths ?? 0),
+      stat('Shape mikro dibuang', data.cleanup?.removedShapes ?? 0),
+      stat('Node', `${data.stats.nodesBefore ?? 0} → ${data.stats.nodesAfter ?? 0}`),
+      stat('Stroke native', data.stats.strokes ?? 0),
+      stat('Ukuran XML', `${((data.stats.outputBytes || 0) / 1024).toFixed(1)} KB`)
+    ].join('') : [
       stat('Shape output', data.stats.outputShapes ?? 0),
       stat('Node', `${data.stats.nodesBefore ?? 0} → ${data.stats.nodesAfter ?? 0}`),
       stat('Stroke native', data.stats.strokes ?? 0),
       stat('clipPath mask', data.stats.clipPathsApplied ?? 0),
       stat('BBox mismatch', data.stats.bboxMismatches ?? 0),
       stat('Audit fidelity', fidelityExact ? 'Tanpa loss' : `${fidelityLosses} loss`),
-      stat('Ukuran XML', `${(data.stats.outputBytes / 1024).toFixed(1)} KB`)
-    ].join('') : isOptimized ? [
-      stat('Layer output', data.stats.outputShapes ?? 0),
-      stat('Safe merge', data.stats.safeColorMerges ?? 0),
-      stat('Titik mikro dibuang', data.stats.microSubpathsRemoved ?? 0),
-      stat('Node', `${data.stats.nodesBefore ?? 0} → ${data.stats.nodesAfter ?? 0}`),
-      stat('Z-order barrier', data.stats.zOrderBarriers ?? 0),
-      stat('Ukuran XML', `${(data.stats.outputBytes / 1024).toFixed(1)} KB`)
-    ].join('') : [
-      stat('Group warna', data.stats.colorGroups ?? data.stats.outputShapes),
-      stat('Shape digabung', data.stats.mergedShapes ?? 0),
-      stat('Node', `${data.stats.nodesBefore ?? 0} → ${data.stats.nodesAfter ?? 0}`),
-      stat('Stroke dihapus', data.stats.strokesRemoved ?? 0),
-      stat('Fallback reducer', data.stats.nodeReductionFallbackShapes ?? 0),
-      stat('Ukuran XML', `${(data.stats.outputBytes / 1024).toFixed(1)} KB`)
+      stat('Ukuran XML', `${((data.stats.outputBytes || 0) / 1024).toFixed(1)} KB`)
     ].join('');
-    const fidelityMessage = isLossless
-      ? (fidelityExact
-          ? ['✓ Audit fidelity: tidak ada kehilangan fitur yang diketahui.']
-          : [`⚠ Audit fidelity menemukan ${fidelityLosses} jenis perbedaan; lihat detail di bawah.`])
+
+    const fidelityMessage = !patchMode
+      ? [fidelityExact
+          ? '✓ Audit fidelity: tidak ada kehilangan fitur yang diketahui.'
+          : `⚠ Audit fidelity menemukan ${fidelityLosses} jenis perbedaan.`]
       : [];
-    warningsEl.innerHTML = [...fidelityMessage, ...(data.warnings || []).map((w) => `⚠ ${w}`)].join('<br>');
-    $('resultTitle').textContent = isLossless
-      ? `${data.width}×${data.height} · ${data.stats.outputShapes} shape · Maximum Fidelity`
-      : isOptimized
-        ? `${data.width}×${data.height} · ${data.stats.outputShapes} layer · AM Optimized`
-        : `${data.width}×${data.height} · ${data.stats.colorGroups ?? data.stats.outputShapes} group warna · ${data.profile?.quality || quality.value}`;
+
+    warningsEl.innerHTML = [...fidelityMessage, ...(data.warnings || []).map((w) => `⚠ ${w}`)]
+      .map(escapeHtml)
+      .join('<br>');
+
+    $('resultTitle').textContent = patchMode
+      ? `${data.width}×${data.height} · ${data.stats.outputShapes} shape · Small Patch Cleanup`
+      : `${data.width}×${data.height} · ${data.stats.outputShapes} shape · Maximum Fidelity`;
+
     resultCard.classList.remove('hidden');
-    if (isLossless) {
-      status.textContent = fidelityExact
-        ? `Selesai · tidak ada loss terdeteksi · ${data.stats.outputShapes} shape · clipPath ${data.stats.clipPathsApplied || 0} · z-order asli.`
-        : `Selesai dengan ${fidelityLosses} jenis perbedaan · periksa warning sebelum memakai XML.`;
-    } else if (isOptimized) {
-      const reduced = Math.max(0, (data.stats.nodesBefore || 0) - (data.stats.nodesAfter || 0));
-      status.textContent = `Selesai · ${data.stats.outputShapes} layer · ${data.stats.microSubpathsRemoved || 0} titik/subpath mikro dibuang · ${reduced} node dikurangi.`;
+
+    if (patchMode) {
+      status.textContent = `Selesai · ${data.cleanup?.removedSubpaths || 0} subpath kecil + ${data.cleanup?.removedShapes || 0} shape mikro dibuang · z-order/stroke tetap dipertahankan.`;
     } else {
-      const reduced = Math.max(0, (data.stats.nodesBefore || 0) - (data.stats.nodesAfter || 0));
-      status.textContent = `Selesai · ${data.stats.colorGroups ?? data.stats.outputShapes} group warna · ${reduced} node dikurangi · stroke dihapus.`;
+      status.textContent = `Selesai · ${data.stats.outputShapes} shape · Maximum Fidelity strict.`;
     }
-  } catch (err) {
-    status.textContent = `Gagal: ${err.message}`;
+  } catch (error) {
+    status.textContent = `Gagal: ${error.message}`;
   } finally {
     convertBtn.disabled = false;
   }

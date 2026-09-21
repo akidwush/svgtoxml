@@ -10,9 +10,9 @@
 <body>
   <main class="shell">
     <header>
-      <p class="eyebrow">SVG → XML · STRICT MAXIMUM FIDELITY v1.9</p>
+      <p class="eyebrow">SVG → XML · ENGINE v2.0</p>
       <h1>Alight Motion Converter</h1>
-      <p class="sub">Maximum Fidelity kini bersifat strict: geometri, z-order, transform, compositing opacity, stroke, gradient, CSS, dan clipPath dipertahankan. Konversi ditolak jika engine mendeteksi perbedaan visual yang tidak bisa direpresentasikan.</p>
+      <p class="sub">Dua engine saja: Maximum Fidelity untuk hasil strict, dan Small Patch Cleanup untuk menghapus patch/island SVG yang sangat kecil tanpa merge warna, tanpa node reduction, dan tanpa menghapus stroke.</p>
     </header>
 
     <section class="card">
@@ -25,53 +25,28 @@
 
       <div class="grid single-top">
         <label>
-          <span>Mode kualitas</span>
+          <span>Engine</span>
           <select id="quality">
-            <option value="lossless" selected>Strict Maximum Fidelity — wajib sama</option>
-            <option value="optimized">AM Optimized — ringan + z-order aman</option>
-            <option value="accurate">Accurate Grouped — node -35%</option>
-            <option value="balanced">Balanced Grouped — node -50%</option>
-            <option value="lightweight">Lightweight Grouped — node -65%</option>
+            <option value="lossless" selected>Maximum Fidelity — strict</option>
+            <option value="patch-clean">Small Patch Cleanup — hapus patch kecil saja</option>
           </select>
         </label>
       </div>
 
       <details class="advanced">
-        <summary>Pengaturan lanjutan</summary>
+        <summary>Pengaturan Small Patch Cleanup</summary>
         <div class="grid">
           <label>
-            <span>Maks. shape sumber</span>
-            <input id="maxShapes" type="number" min="1" max="5000" value="5000" />
+            <span>Ambang patch kecil (%)</span>
+            <input id="patchAreaPercent" type="number" min="0" max="0.25" step="0.0001" value="0.002" />
           </label>
           <label>
-            <span>Buang detail di bawah (%)</span>
-            <input id="minArea" type="number" min="0" max="5" step="0.0001" value="0" />
-          </label>
-          <label>
-            <span>Kurangi node (%)</span>
-            <input id="nodeReduction" type="number" min="0" max="80" step="1" value="35" />
-          </label>
-          <label>
-            <span>Presisi koordinat</span>
-            <select id="precision">
-              <option value="3">3 desimal</option>
-              <option value="4">4 desimal</option>
-              <option value="5" selected>5 desimal</option>
-              <option value="6">6 desimal</option>
-              <option value="8">8 desimal</option>
-            </select>
-          </label>
-          <label>
-            <span>Detail mikro di bawah (%)</span>
-            <input id="microDetailPercent" type="number" min="0" max="0.25" step="0.0001" value="0.0015" />
-          </label>
-          <label>
-            <span>Maks. layer output (Optimized)</span>
-            <input id="maxOutputGroups" type="number" min="20" max="1200" step="10" value="320" />
+            <span>Lindungi detail panjang (%)</span>
+            <input id="protectThinPercent" type="number" min="0" max="100" step="0.1" value="3.5" />
           </label>
         </div>
-        <p id="losslessNote" class="mini hidden">Strict Maximum Fidelity mengunci node 0%, detail threshold 0%, shape unlimited, presisi 8, grouping warna OFF, native stroke/clipPath/group opacity ON. Output dibatalkan jika audit menemukan kehilangan visual.</p>
-        <p id="optimizedNote" class="mini">AM Optimized: hapus titik/subpath mikro, reducer moderat, native stroke tetap ada, lalu merge warna hanya jika tidak menabrak z-order. Target layer output default 320.</p>
+        <p id="losslessNote" class="mini">Maximum Fidelity: z-order asli, native stroke, gradient, clipPath, group opacity, presisi 8, tanpa grouping dan tanpa node reduction. Output ditolak jika strict audit menemukan loss yang diketahui.</p>
+        <p id="patchNote" class="mini hidden">Small Patch Cleanup memakai pipeline Maximum Fidelity yang sama, lalu hanya membuang island/subpath di bawah ambang patch. Bentuk tipis yang cukup panjang dilindungi agar garis penting tidak ikut hilang.</p>
       </details>
 
       <button id="convertBtn" type="button">Konversi ke XML</button>
@@ -95,13 +70,15 @@
     </section>
 
     <section class="card compact">
-      <p class="eyebrow">ENGINE API v1</p>
+      <p class="eyebrow">ENGINE API v2</p>
+      <code>GET /api/v1/engines</code>
+      <p class="mini">Daftar engine publik dan bisa dibaca dari website mana pun.</p>
+      <code>GET /api/v1/convert?engine=small-patch-cleanup&amp;svg=...</code>
+      <p class="mini">GET conversion untuk SVG kecil. Header <code>x-api-key</code> tetap wajib. Tambahkan <code>&amp;raw=1</code> untuk XML langsung.</p>
       <code>POST /api/v1/convert</code>
-      <p class="mini">Endpoint integrasi untuk website/app lain. API key selalu diperiksa di endpoint v1 dan dikirim lewat header <code>x-api-key</code>. Website converter ini memakai endpoint internal <code>/api/convert</code>, jadi secret tidak pernah ditaruh di browser.</p>
-      <code>{ "svg": "&lt;svg...&gt;", "options": { "quality": "optimized" } }</code>
-      <p class="mini"><code>GET /api/v1/auth</code> untuk mengecek API key · <code>GET /api/health?deep=1</code></p>
+      <p class="mini">Disarankan untuk SVG besar. Body: <code>{ "svg": "&lt;svg...&gt;", "options": { "quality": "maximum-fidelity" } }</code></p>
     </section>
   </main>
-  <script type="module" src="/app.js?v=1.9.0"></script>
+  <script type="module" src="/app.js?v=2.0.0"></script>
 </body>
 </html>

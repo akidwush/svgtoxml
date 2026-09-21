@@ -1,83 +1,36 @@
-# SVG → Alight Motion XML
+# SVG → Alight Motion XML v2
 
-Converter SVG ke XML scene Alight Motion dengan dua jalur utama: `lossless`/Maximum Fidelity untuk mempertahankan struktur visual sebanyak mungkin, dan `optimized` untuk hasil yang lebih ringan di HP.
+Engine SVG ke XML Alight Motion sekarang hanya memiliki **dua mode**:
 
-## Fokus converter
+1. **Maximum Fidelity** — pipeline strict yang mempertahankan z-order, native stroke, gradient, clipPath geometris, group opacity, dan presisi tinggi.
+2. **Small Patch Cleanup** — memakai pipeline Maximum Fidelity yang sama, lalu hanya membuang island/subpath SVG yang sangat kecil. Tidak ada color grouping, node reduction, atau penghapusan stroke.
 
-- Warna SVG dikonversi ke format Alight Motion `#AARRGGBB`.
-- Mendukung path, rect, circle, ellipse, line, polygon, polyline, nested viewport, transform, `<use>`, CSS selector kompleks, custom property/`var()`, dan `!important`.
-- Maximum Fidelity mempertahankan z-order, shape, native stroke, gradient dua warna, dan `clipPath` geometris sebagai mask Alight Motion.
-- Mode grouped menggabungkan fill ARGB identik; mode ini memang dapat membuang stroke atau meratakan gradient sesuai profil.
-- Arc diubah menjadi cubic Bézier. Node contour kompleks dikurangi secara adaptif dengan perlindungan primitive dan sudut tajam.
-- Mode `accurate`, `balanced`, dan `lightweight` mengontrol tingkat pengurangan node tanpa mengubah prinsip 1 warna = 1 group.
+Engine lama `optimized`, `accurate`, `balanced`, dan `lightweight` tidak lagi tersedia sebagai mode eksekusi. Nilai quality lama/asing akan fallback ke Maximum Fidelity.
 
-## Jalankan lokal
+## Endpoint
 
-```bash
-npm install
-npm test
-npx vercel dev
-```
-
-Buka URL lokal yang diberikan Vercel CLI.
-
-## Deploy ke Vercel
-
-Import repo ini ke Vercel. Converter web tetap dapat dipakai tanpa memasukkan secret ke browser.
-
-### Aktifkan Engine API untuk website lain
-
-v1.6 memisahkan dua endpoint:
-
-```text
-POST /api/convert       -> dipakai website svgtoxml sendiri
-POST /api/v1/convert    -> engine API eksternal, API key wajib
-```
-
-Buat key di Termux:
-
-```bash
-bash scripts/generate-api-key.sh website-utama
-```
-
-Di Vercel buka **Project → Settings → Environment Variables**, lalu tambahkan satu key:
-
-```env
-SVG2XML_API_KEY=amx_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-Atau beberapa key, satu per website:
-
-```env
-SVG2XML_API_KEYS=website-a=amx_live_xxx,website-b=amx_live_yyy
-```
-
-Opsional batasi origin browser:
-
-```env
-API_ALLOWED_ORIGINS=https://website-a.vercel.app,https://website-b.com
-```
-
-Jika `API_ALLOWED_ORIGINS` kosong, origin tidak dibatasi tetapi API key tetap wajib. Setelah mengubah Environment Variables, redeploy project.
-
-> **Penting:** jangan menaruh `amx_live_...` di JavaScript frontend publik website lain. Simpan key sebagai environment variable di backend/serverless function website tersebut.
-
-## Engine API v1
-
-### Health
+### Daftar engine — GET publik
 
 ```http
-GET /api/v1/health
+GET /api/v1/engines
 ```
 
-### Validasi API key
+Response berisi ID engine, alias, dan opsi yang didukung. Endpoint ini CORS public dan tidak memerlukan API key.
+
+### Convert — GET
+
+Cocok untuk SVG kecil yang aman dimasukkan ke query string:
 
 ```http
-GET /api/v1/auth
+GET /api/v1/convert?engine=small-patch-cleanup&svg=%3Csvg...%3E
 x-api-key: amx_live_...
 ```
 
-### Convert
+Tambahkan `raw=1` atau header `Accept: application/xml` untuk menerima XML langsung.
+
+> GET memiliki batas panjang URL dari browser/CDN. Untuk SVG normal/besar gunakan POST.
+
+### Convert — POST
 
 ```http
 POST /api/v1/convert
@@ -85,269 +38,75 @@ Content-Type: application/json
 x-api-key: amx_live_...
 ```
 
-Body:
+Maximum Fidelity:
 
 ```json
 {
-  "svg": "<svg viewBox=\"0 0 1080 1350\">...</svg>",
+  "svg": "<svg>...</svg>",
   "options": {
-    "title": "Project Saya",
-    "quality": "lossless",
-    "validateBounds": true,
+    "quality": "maximum-fidelity",
     "requireExact": true
   }
 }
 ```
 
-Untuk menerima XML langsung gunakan `POST /api/v1/convert?raw=1` atau header `Accept: application/xml`. `Authorization: Bearer amx_live_...` juga didukung.
-
-Contoh curl:
-
-```bash
-curl -X POST 'https://svgtoxml.vercel.app/api/v1/convert' \
-  -H 'content-type: application/json' \
-  -H 'x-api-key: amx_live_KEY_KAMU' \
-  --data '{"svg":"<svg viewBox=\"0 0 100 100\"><path d=\"M0 0L100 0L100 100Z\" fill=\"#000\"/></svg>","options":{"quality":"lossless"}}'
-```
-
-Untuk website Vercel lain, lihat `examples/vercel-server-proxy.js`.
-
-## Arti opsi
-
-- `quality`: `lossless` (Maximum Fidelity), `optimized`, `accurate` (default API kompatibilitas), `balanced`, atau `lightweight`.
-- `maxShapes`: default Accurate `2500`; bisa dinaikkan hingga `5000`.
-- `minAreaPercent`: default Accurate `0`, sehingga detail kecil tidak dibuang.
-- `precision`: default Accurate `5`; rentang `0–6`.
-- `duration`: durasi scene dalam ms. Default `1000`.
-- `fps`: frame rate. Default `30`.
-
-## Batas format
-
-SVG `text`, bitmap `<image>`, filter kompleks, pattern fill, mask luminance/alpha, marker, dash stroke, dan gradient dengan lebih dari dua stop belum dapat dipetakan 1:1 ke schema yang tervalidasi. `clipPath` geometris sudah dipetakan ke native mask pada Maximum Fidelity. Response selalu membawa `fidelity.exact`, `fidelity.status`, dan daftar `fidelity.losses`; UI tidak mengklaim hasil identik bila audit menemukan fitur yang turun kualitas.
-
-## Push dari Termux ke GitHub
-
-Dari root proyek:
-
-```bash
-bash scripts/push-termux.sh https://github.com/USERNAME/NAMA-REPO.git
-```
-
-Dengan pesan commit custom:
-
-```bash
-bash scripts/push-termux.sh \
-  https://github.com/USERNAME/NAMA-REPO.git \
-  "feat: deploy svg alight converter"
-```
-
-Script akan `npm install`, menjalankan syntax check + test, commit, lalu push ke branch `main`.
-
-## v1.1 — Vercel HTTP 500 fix
-
-- API entry point memakai Web Handler `export default { fetch() {} }` sesuai runtime Vercel terbaru.
-- Converter di-load dengan dynamic import agar error dependency/bundle dikembalikan sebagai JSON, bukan error 500 tanpa pesan.
-- `GET /api/v1/health?deep=1` menguji apakah modul converter benar-benar bisa dimuat.
-- UI menampilkan kode/detail error server sehingga debugging di HP lebih mudah.
-
-## v1.2.0 - Alight Motion strict compatibility
-
-Versi ini memperketat output XML agar mengikuti bentuk yang terlihat pada XML ekspor Alight Motion:
-
-- setiap path memakai command eksplisit `M`, `L`, `C`, `Z` per segmen;
-- ada spasi setelah command dan koma antar pasangan control-point cubic;
-- tidak memakai compact SVG number adjacency seperti `M-5-10` atau `C1-2...`;
-- setiap shape path menulis identity scale `<scale value="1.000000,1.000000" />` secara eksplisit.
-
-Perubahan ini dibuat karena sintaks compact yang legal untuk SVG belum tentu diterima oleh parser import XML Alight Motion.
-
-## v1.3.0 — Fidelity-first + Engine API v1
-
-Perubahan utama:
-
-- mode default sekarang **Accurate**, bukan pengurangan layer agresif;
-- Accurate: `maxShapes=2500`, `minAreaPercent=0`, `precision=5`;
-- Balanced dan Lightweight tetap tersedia untuk file yang terlalu berat;
-- `preserveAspectRatio` + `viewBox` dipetakan sesuai aturan SVG (`meet`, `slice`, `none`), bukan selalu stretch X/Y;
-- nested `<svg>` / `<symbol>` viewport dan `<use width/height>` ditangani lebih baik;
-- selector CSS descendant sederhana seperti `.layer .skin` ikut dihitung;
-- endpoint stabil untuk integrasi pihak ketiga: `POST /api/v1/convert`;
-- field API key di frontend dihapus. Secret **tidak pernah ditaruh di browser**;
-- bila `SVG2XML_API_KEY` di Vercel diisi, request eksternal wajib mengirim `x-api-key`, sedangkan frontend same-origin tetap bisa bekerja tanpa membocorkan secret.
-
-### API pihak ketiga
-
-```bash
-curl -X POST 'https://DOMAIN.vercel.app/api/v1/convert' \
-  -H 'content-type: application/json' \
-  -H 'x-api-key: KEY_DARI_OWNER' \
-  --data '{"svg":"<svg>...</svg>","options":{"quality":"accurate"}}'
-```
-
-`quality` dapat berupa `accurate`, `balanced`, atau `lightweight`.
-
-> Catatan fidelity: `clipPath`, mask, filter kompleks, text/font eksternal, dan gradient >2 stop masih tidak selalu dapat dipetakan 1:1 ke format XML Alight Motion yang sudah tervalidasi. Engine memberi warning bila menemukan fitur tersebut.
-
-## v1.4.0 — Color Groups + node reduction
-
-Output Alight Motion sekarang diubah mengikuti workflow editing yang lebih praktis:
-
-- **1 warna solid = 1 `embedScene` group**;
-- semua path dengan warna ARGB yang sama digabung menjadi **1 vector path** di dalam group tersebut;
-- **stroke tidak ditulis** ke XML; elemen stroke-only dilewati;
-- gradient diratakan menjadi satu warna midpoint agar satu group tidak mencampur paint;
-- node pada contour kompleks dikurangi secara adaptif, tetapi primitive/path sederhana dan sudut tajam dilindungi;
-- default Accurate mengurangi sekitar 35% anchor yang aman, Balanced 50%, Lightweight 65%;
-- statistik API mengembalikan `colorGroups`, `mergedShapes`, `nodesBefore`, `nodesAfter`, `strokesRemoved`, dan `gradientsFlattened`.
-
-Catatan penting: grouping global per warna dapat mengubah urutan tumpukan bila warna yang sama tersebar di beberapa posisi z-order. Engine mengurutkan group berdasarkan rata-rata posisi sumber untuk meminimalkan perubahan tersebut. Jika fidelity z-order absolut lebih penting daripada satu-group-per-warna, gunakan strategi grouping per-run pada versi lanjutan.
-
-## v1.5.0 — Lossless geometry (nama historis)
-
-Mode baru `quality: "lossless"` ditambahkan tanpa mengubah behavior tiga mode grouped lama.
-
-Lossless memaksa:
-
-- `nodeReduction = 0`
-- `minAreaPercent = 0`
-- source shape limit = unlimited
-- precision output = 8 desimal
-- grouping by color = OFF
-- z-order = urutan SVG asli
-- native Alight Motion `<path-stroke>` = ON
-- 2-stop linear/radial gradient = dipertahankan
-- bbox validation = ON secara default
-
-Path dinormalisasi lewat helper `lib/path-geometry.js`. `S/T` di-expand terlebih dahulu,
-`Q` dikonversi secara eksak menjadi cubic Bézier, dan `A` diubah menggunakan standard
-elliptical-arc to cubic decomposition dari `svgpath.unarc()`.
-
-### API
+Small Patch Cleanup:
 
 ```json
 {
   "svg": "<svg>...</svg>",
   "options": {
-    "quality": "lossless",
-    "validateBounds": true
+    "quality": "small-patch-cleanup",
+    "patchAreaPercent": 0.002,
+    "protectThinPercent": 3.5
   }
 }
 ```
 
-Response lossless memiliki `validation`:
+### Engine IDs dan alias
 
-```json
-{
-  "enabled": true,
-  "sourceDrawable": 10,
-  "emittedShapes": 10,
-  "missingShapes": 0,
-  "bboxMismatches": 0,
-  "details": []
-}
+- `lossless`, `maximum-fidelity`, `maximum` → Maximum Fidelity.
+- `patch-clean`, `small-patch`, `small-patch-cleanup` → Small Patch Cleanup.
+
+## API key
+
+Website resmi memakai `POST /api/convert` secara same-origin tanpa mengekspos secret.
+
+Integrasi website/app lain memakai `/api/v1/convert` dan wajib mengirim API key lewat header:
+
+```env
+SVG2XML_API_KEY=amx_live_xxx
 ```
 
-### Batas fitur yang dilaporkan eksplisit
+atau multi-key:
 
-XML referensi yang tersedia membuktikan native path fill, 2-color gradient, dan
-`path-stroke` (color/size/join). Mapping 1:1 untuk SVG `clip-path`, `mask`, filter kompleks,
-`stroke-dasharray`, dan stroke line-cap belum terbukti. Lossless tidak silent-drop fitur
-tersebut: warning dikembalikan melalui API/UI.
-
-Untuk `fill-rule="evenodd"`, engine mengubah winding subpath tertutup menjadi alternating
-winding sehingga visual lubang sederhana tetap sesuai pada renderer nonzero tanpa mengubah
-kurva Bézier. Self-intersection ekstrem tetap perlu verifikasi manual.
-
-
-## v1.5.1 — Test reliability hotfix
-
-- Tidak mengubah engine konversi atau behavior mode Accurate/Balanced/Lightweight/Lossless.
-- Memperbaiki fixture unit test node reduction: sekarang memakai contour over-sampled yang benar-benar reducible.
-- Fixture sine lama dapat berhenti di anchor yang sengaja dilindungi oleh corner-preservation (`angle < 135°`), sehingga assertion `nodesBefore > nodesAfter` tidak selalu valid.
-
-
-## v1.5.2 — Android file-read reliability
-
-- SVG dibaca sekali segera setelah file picker selesai, lalu source disimpan di memori browser.
-- Tombol Convert tidak lagi memanggil `File.text()` pada reference Android yang bisa kedaluwarsa/revoked.
-- Pesan error file permission sekarang meminta pilih ulang file secara eksplisit.
-- Mode default UI diubah ke Lossless; tiga mode lama tetap tersedia dan behavior engine-nya tidak berubah.
-
-## v1.5.3 — grouped reducer reliability
-
-- Mode Lossless tidak diubah: node reduction tetap 0%, z-order/source-shape/stroke tetap dipertahankan.
-- Accurate/Balanced/Lightweight sekarang mereduksi setiap source contour secara independen sebelum digabung berdasarkan warna.
-- Satu contour yang gagal direduksi tidak lagi membatalkan reduction untuk seluruh group warna.
-- Warning per-warna yang memenuhi layar diganti satu warning agregat; jumlah fallback tersedia di `stats.nodeReductionFallbackShapes`.
-
-
-## v1.6.0 — External Engine API keys
-
-- Website resmi memakai `POST /api/convert`.
-- Integrasi eksternal memakai `POST /api/v1/convert` dan API key selalu wajib.
-- Mendukung satu key via `SVG2XML_API_KEY` atau multi-key bernama via `SVG2XML_API_KEYS`.
-- Perbandingan secret memakai SHA-256 + `crypto.timingSafeEqual`.
-- `GET /api/v1/auth` memvalidasi key tanpa melakukan konversi.
-- `API_ALLOWED_ORIGINS` dapat membatasi origin browser.
-- Secret tidak pernah ditaruh di frontend converter resmi.
-- Contoh proxy server-side tersedia di `examples/vercel-server-proxy.js`.
-
-
-## v1.7.0 — AM Optimized / phone-first XML
-
-Mode baru `optimized` ditambahkan dan menjadi default UI. API tetap kompatibel dengan default lama bila `quality` tidak dikirim; integrasi baru disarankan mengirim `quality: "optimized"` secara eksplisit. Mode lama `lossless`, `accurate`, `balanced`, dan `lightweight` tetap tersedia.
-
-AM Optimized dibuat untuk SVG auto-vector yang bisa menghasilkan ribuan layer di Alight Motion:
-
-- membuang subpath/titik mikro berdasarkan luas relatif canvas;
-- melindungi detail panjang-tipis agar garis penting tidak ikut hilang;
-- mengurangi node secara moderat per contour;
-- mempertahankan native stroke dan gradient 2-stop bila tersedia;
-- menggabungkan path dengan style sama hanya jika perpindahan z-order tidak memotong shape yang overlap;
-- membatasi layer output (default 320) dengan membuang group mikro terkecil bila masih terlalu banyak;
-- mengembalikan statistik `microSubpathsRemoved`, `safeColorMerges`, `zOrderBarriers`, dan `optimizedGroupsDropped`.
-
-Contoh API:
-
-```json
-{
-  "svg": "<svg>...</svg>",
-  "options": {
-    "quality": "optimized",
-    "microDetailPercent": 0.0015,
-    "maxOutputGroups": 320,
-    "nodeReduction": 38
-  }
-}
+```env
+SVG2XML_API_KEYS=site-a=amx_live_xxx,site-b=amx_live_yyy
 ```
 
-## v1.8.0 — Maximum Fidelity + native clipPath
+Jangan taruh API key di JavaScript frontend publik. Simpan key di backend/serverless website pemanggil.
 
-- UI menjadikan Maximum Fidelity sebagai default dan mengganti klaim “100% Akurat” dengan audit fidelity yang dapat diverifikasi.
-- `clipPath` geometris, termasuk yang diwariskan dari `<g>`, diisolasi per shape lalu ditulis sebagai layer `blending="mask"` agar z-order lain tidak ikut terpotong.
-- Menangani `clipPathUnits="objectBoundingBox"`, transform, primitive, path, dan `<use>` di dalam clipPath.
-- CSS memakai selector engine penuh untuk child/sibling/attribute/static pseudo selector, cascade `!important`, serta custom property `var()`.
-- Unit `in`, `cm`, `mm`, `q`, `pt`, `pc`, `px` dan geometri persen dihitung terhadap viewport/viewBox yang tepat.
-- Style class/CSS pada gradient stop kini dipertahankan.
-- API menambahkan `fidelity` dan statistik loss spesifik: clip, mask, filter, pattern, marker, dash, cap, shape hilang, serta bbox mismatch.
+## CORS
 
-## v1.9.0 — Strict Maximum Fidelity
+Opsional batasi origin browser:
 
-- Frontend selalu mengirim `requireExact: true` pada mode Maximum Fidelity.
-- Jika audit menemukan fitur yang tidak dapat direpresentasikan sama, API mengembalikan HTTP `422` dengan code `FIDELITY_REQUIREMENT_FAILED`, `fidelity.losses`, dan warnings; XML yang menyesatkan tidak diberikan.
-- Opacity pada shape ditulis sebagai opacity transform layer, sehingga fill dan stroke dikomposit lebih dulu sesuai SVG.
-- Opacity pada `<g>` dan instance `<use>` dipertahankan sebagai nested `embedScene`; overlap antar-child tidak lagi berubah akibat alpha yang sebelumnya diratakan ke tiap warna.
-- Root SVG opacity juga diterapkan pada wrapper scene.
-
-Contoh integrasi strict untuk Nexora:
-
-```json
-{
-  "svg": "<svg>...</svg>",
-  "options": {
-    "quality": "lossless",
-    "validateBounds": true,
-    "requireExact": true
-  }
-}
+```env
+API_ALLOWED_ORIGINS=https://site-a.com,https://site-b.com
 ```
+
+Jika kosong, API v1 menerima origin mana pun tetapi API key tetap wajib.
+
+## Local check
+
+```bash
+npm install
+npm run check
+npm test
+npx vercel dev
+```
+
+## Fidelity
+
+Maximum Fidelity dapat menolak output dengan HTTP `422 FIDELITY_REQUIREMENT_FAILED` jika `requireExact: true` dan audit menemukan fitur SVG yang belum punya mapping 1:1.
+
+Small Patch Cleanup secara sengaja menandai fidelity sebagai degraded bila ada patch yang benar-benar dibuang, dan mengembalikan statistik `cleanup.removedSubpaths`, `cleanup.removedShapes`, dan `cleanup.removedNodes`.
