@@ -7,16 +7,24 @@ const catalog = {
       quality: 'lossless',
       aliases: ['lossless', 'maximum'],
       description: 'Strict fidelity pipeline: source order, native stroke, gradient, clipPath and group opacity preserved.',
-      options: ['title', 'duration', 'fps', 'validateBounds', 'requireExact']
+      options: ['title', 'duration', 'fps', 'groupingMode', 'detectPrimitives', 'validateBounds', 'requireExact']
     },
     {
       id: 'small-patch-cleanup',
       quality: 'patch-clean',
       aliases: ['patch-clean', 'small-patch'],
       description: 'Maximum Fidelity pipeline plus tiny island/subpath removal only; no grouping or node reduction.',
-      options: ['title', 'duration', 'fps', 'patchAreaPercent', 'protectThinPercent']
+      options: ['title', 'duration', 'fps', 'groupingMode', 'detectPrimitives', 'patchAreaPercent', 'protectThinPercent']
     }
   ],
+  controls: {
+    groupingMode: ['nested', 'flat'],
+    detectPrimitives: true,
+    primitiveTypes: ['rect', 'circle', 'ellipse'],
+    primitiveFallback: 'path',
+    fps: { min: 1, max: 240, default: 30 },
+    durationMs: { min: 100, max: 600000, default: 1000 }
+  },
   convert: {
     endpoint: '/api/v1/convert',
     methods: ['GET', 'POST'],
