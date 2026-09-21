@@ -57,8 +57,8 @@ Small Patch Cleanup:
   "svg": "<svg>...</svg>",
   "options": {
     "quality": "small-patch-cleanup",
-    "patchAreaPercent": 0.002,
-    "protectThinPercent": 3.5
+    "patchAreaPercent": 0.01,
+    "protectThinPercent": 2.0
   }
 }
 ```
