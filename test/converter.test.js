@@ -77,6 +77,50 @@ test('Small Patch Cleanup protects long thin details', () => {
   assert.match(out.xml, /thin-line/);
 });
 
+
+test('Small Patch Cleanup default is more aggressive for compact micro patches', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <rect id="main" x="10" y="10" width="80" height="80" fill="red"/>
+    <rect id="dust-default" x="2" y="2" width="0.8" height="0.8" fill="blue"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'small-patch-cleanup' });
+  assert.equal(out.cleanup.patchAreaPercent, 0.01);
+  assert.equal(out.cleanup.protectThinPercent, 2);
+  assert.equal(out.cleanup.thinAspectRatio, 6);
+  assert.equal(out.stats.outputShapes, 1);
+  assert.ok(out.cleanup.removedShapes >= 1);
+  assert.doesNotMatch(out.xml, /dust-default/);
+});
+
+test('Small Patch Cleanup removes compact patches even when one side crosses thin-protection length', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <rect id="main" x="10" y="10" width="80" height="80" fill="red"/>
+    <rect id="compact-patch" x="2" y="2" width="2.5" height="1" fill="blue"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, {
+    quality: 'patch-clean',
+    patchAreaPercent: 0.05,
+    protectThinPercent: 2
+  });
+  assert.equal(out.stats.outputShapes, 1);
+  assert.ok(out.cleanup.removedShapes >= 1);
+  assert.doesNotMatch(out.xml, /compact-patch/);
+});
+
+test('Small Patch Cleanup still protects genuinely elongated thin detail', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <path id="needle-detail" d="M5 40 L95 40 L95 40.2 L5 40.2 Z" fill="black"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, {
+    quality: 'patch-clean',
+    patchAreaPercent: 0.5,
+    protectThinPercent: 2
+  });
+  assert.equal(out.stats.outputShapes, 1);
+  assert.equal(out.cleanup.removedShapes, 0);
+  assert.match(out.xml, /needle-detail/);
+});
+
 test('Maximum Fidelity keeps two-stop gradient and clipPath', () => {
   const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
     <defs>
