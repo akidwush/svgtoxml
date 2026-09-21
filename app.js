@@ -18,8 +18,8 @@ let selectedFileSignature = '';
 let fileReadPromise = null;
 
 const PRESETS = {
-  lossless: { patchAreaPercent: 0.002, protectThinPercent: 3.5 },
-  'patch-clean': { patchAreaPercent: 0.002, protectThinPercent: 3.5 }
+  lossless: { patchAreaPercent: 0.01, protectThinPercent: 2.0 },
+  'patch-clean': { patchAreaPercent: 0.01, protectThinPercent: 2.0 }
 };
 
 function applyPreset(name) {
