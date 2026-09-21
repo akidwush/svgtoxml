@@ -1,0 +1,24 @@
+name: SVG2XML Control Surface Verify
+on:
+  pull_request:
+    paths:
+      - 'lib/converter.js'
+      - 'api/v1/engines.js'
+      - 'test/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/svg2xml-control-verify.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - run: npm test

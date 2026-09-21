@@ -112,3 +112,60 @@ test('strict Maximum Fidelity rejects known unsupported visual loss', () => {
     (error) => error?.code === 'FIDELITY_REQUIREMENT_FAILED'
   );
 });
+
+
+test('control surface applies FPS, duration and nested group hierarchy', () => {
+  const svg = `<svg width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+    <g id="outer"><g id="inner"><rect id="box" x="10" y="10" width="80" height="40" fill="#ff0000"/></g></g>
+  </svg>`;
+  const nested = convertSvgToAlightXml(svg, {
+    quality: 'maximum-fidelity',
+    duration: 2000,
+    fps: 60,
+    groupingMode: 'nested',
+    detectPrimitives: false
+  });
+  assert.match(nested.xml, /totalTime="2000" fps="60"/);
+  assert.match(nested.xml, /label="outer"/);
+  assert.match(nested.xml, /label="inner"/);
+  assert.equal(nested.profile.groupingMode, 'nested');
+
+  const flat = convertSvgToAlightXml(svg, {
+    quality: 'maximum-fidelity',
+    duration: 2000,
+    fps: 60,
+    groupingMode: 'flat',
+    detectPrimitives: false
+  });
+  assert.doesNotMatch(flat.xml, /label="outer"/);
+  assert.doesNotMatch(flat.xml, /label="inner"/);
+  assert.match(flat.xml, /label="box"/);
+  assert.equal(flat.profile.groupingMode, 'flat');
+});
+
+test('primitive detection emits conservative native rectangle and can fall back to path', () => {
+  const svg = '<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg"><rect id="box" x="20" y="10" width="80" height="40" fill="#123456"/></svg>';
+  const native = convertSvgToAlightXml(svg, {
+    quality: 'maximum-fidelity',
+    detectPrimitives: true
+  });
+  assert.match(native.xml, /label="box"[^>]*s="\.rect"/);
+  assert.match(native.xml, /property name="size" type="vec2" value="80\.00000000,40\.00000000"/);
+  assert.equal(native.stats.primitiveOutput, 1);
+
+  const path = convertSvgToAlightXml(svg, {
+    quality: 'maximum-fidelity',
+    detectPrimitives: false
+  });
+  assert.doesNotMatch(path.xml, /s="\.rect"/);
+  assert.match(path.xml, /<path d=/);
+  assert.equal(path.stats.primitiveOutput, 0);
+});
+
+test('unsupported or transformed primitives stay on path fallback', () => {
+  const svg = '<svg width="100" height="100"><rect id="rounded" x="10" y="10" width="40" height="20" rx="4" fill="red"/><rect id="rotated" x="60" y="10" width="20" height="20" transform="rotate(20 70 20)" fill="blue"/></svg>';
+  const out = convertSvgToAlightXml(svg, { quality: 'maximum-fidelity', detectPrimitives: true });
+  assert.equal(out.stats.primitiveOutput, 0);
+  assert.ok(out.stats.primitiveFallback >= 2);
+  assert.match(out.xml, /<path d=/);
+});
