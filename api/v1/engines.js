@@ -13,7 +13,7 @@ const catalog = {
       id: 'small-patch-cleanup',
       quality: 'patch-clean',
       aliases: ['patch-clean', 'small-patch'],
-      description: 'Maximum Fidelity pipeline plus tiny island/subpath removal only; no grouping or node reduction.',
+      description: 'Maximum Fidelity pipeline plus aggressive compact micro-patch removal; elongated thin details remain protected; no grouping or node reduction.',
       options: ['title', 'duration', 'fps', 'groupingMode', 'detectPrimitives', 'patchAreaPercent', 'protectThinPercent']
     }
   ],
@@ -23,7 +23,8 @@ const catalog = {
     primitiveTypes: ['rect', 'circle', 'ellipse'],
     primitiveFallback: 'path',
     fps: { min: 1, max: 240, default: 30 },
-    durationMs: { min: 100, max: 600000, default: 1000 }
+    durationMs: { min: 100, max: 600000, default: 1000 },
+    smallPatchCleanup: { patchAreaPercent: 0.01, protectThinPercent: 2.0, thinAspectRatio: 6 }
   },
   convert: {
     endpoint: '/api/v1/convert',
