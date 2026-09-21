@@ -28,8 +28,8 @@ test('health advertises v2 engines and GET/POST API', async () => {
   const response = await healthHandler.fetch(new Request('https://example.test/api/health'));
   assert.equal(response.status, 200);
   const body = await response.json();
-  assert.equal(body.version, '2.0.0');
-  assert.deepEqual(body.engines, ['maximum-fidelity', 'small-patch-cleanup']);
+  assert.equal(body.version, '2.1.0');
+  assert.deepEqual(body.engines, ['maximum-fidelity', 'color-groups', 'small-patch-cleanup']);
   assert.deepEqual(body.externalApiMethods, ['GET', 'POST']);
 });
 
@@ -41,7 +41,7 @@ test('engine catalog is public and CORS-ready', async () => {
   assert.equal(response.headers.get('access-control-allow-origin'), '*');
   const body = await response.json();
   assert.equal(body.ok, true);
-  assert.equal(body.engines.length, 2);
+  assert.equal(body.engines.length, 3);
 });
 
 test('public website endpoint remains same-origin POST only', async () => {
@@ -76,6 +76,22 @@ test('external GET conversion works for small SVG and engine alias', async () =>
     assert.equal(body.ok, true);
     assert.equal(body.profile.quality, 'patch-clean');
     assert.equal(body.api.authenticated, true);
+  });
+});
+
+test('external GET supports Color Groups engine', async () => {
+  await withEnv('SVG2XML_API_KEY', 'amx_live_test-secret', async () => {
+    const svg = encodeURIComponent('<svg width="20" height="10"><rect width="8" height="10" fill="red"/><rect x="10" width="8" height="10" fill="red"/></svg>');
+    const response = await v1ConvertHandler.fetch(new Request(
+      `https://example.test/api/v1/convert?engine=color-groups&svg=${svg}`,
+      { headers: { 'x-api-key': 'amx_live_test-secret' } }
+    ));
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.profile.quality, 'color-group');
+    assert.equal(body.profile.engine, 'color-groups');
+    assert.equal(body.grouping.groupedColors, 1);
+    assert.equal(body.grouping.outputLayers, 1);
   });
 });
 
