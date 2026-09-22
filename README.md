@@ -1,9 +1,9 @@
-# SVG → Alight Motion XML v2.2
+# SVG → Alight Motion XML v2.2.1
 
 Engine SVG ke XML Alight Motion sekarang memiliki **tiga mode**:
 
 1. **Maximum Fidelity** — pipeline strict yang mempertahankan z-order, native stroke, gradient, clipPath geometris, group opacity, dan presisi tinggi.
-2. **Color Groups** — clone pipeline geometri Maximum Fidelity untuk SVG trace flat-color; shape dengan fill solid identik dipaketkan ke satu layer warna tanpa menyatukan geometri path internal. Contoh: 100 shape dengan 10 warna solid → 10 layer warna dalam satu group.
+2. **Color Groups** — clone pipeline geometri Maximum Fidelity untuk SVG trace flat-color; shape dengan fill solid identik dipaketkan ke satu layer warna tanpa menyatukan geometri path internal. Wrapper group sekarang mengikuti struktur import Alight Motion yang konservatif (neutral embed fill, empty nested scene title, outTime eksplisit). Contoh: 100 shape dengan 10 warna solid → 10 layer warna dalam satu group.
 3. **Small Patch Cleanup** — memakai pipeline Maximum Fidelity yang sama, lalu membuang island/subpath SVG yang sangat kecil.
 
 Engine lama `optimized`, `accurate`, `balanced`, dan `lightweight` tidak lagi tersedia sebagai mode eksekusi. Nilai quality lama/asing akan fallback ke Maximum Fidelity.

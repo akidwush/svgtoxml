@@ -28,7 +28,7 @@ test('health advertises v2 engines and GET/POST API', async () => {
   const response = await healthHandler.fetch(new Request('https://example.test/api/health'));
   assert.equal(response.status, 200);
   const body = await response.json();
-  assert.equal(body.version, '2.2.0');
+  assert.equal(body.version, '2.2.1');
   assert.deepEqual(body.engines, ['maximum-fidelity', 'color-groups', 'small-patch-cleanup']);
   assert.deepEqual(body.externalApiMethods, ['GET', 'POST']);
 });
@@ -41,7 +41,9 @@ test('engine catalog is public and CORS-ready', async () => {
   assert.equal(response.headers.get('access-control-allow-origin'), '*');
   const body = await response.json();
   assert.equal(body.ok, true);
+  assert.equal(body.version, '2.2.1');
   assert.equal(body.engines.length, 3);
+  assert.equal(body.controls.colorGroups.alightImportSafe, true);
 });
 
 test('public website endpoint remains same-origin POST only', async () => {
@@ -90,8 +92,12 @@ test('external GET supports Color Groups engine', async () => {
     const body = await response.json();
     assert.equal(body.profile.quality, 'color-group');
     assert.equal(body.profile.engine, 'color-groups');
+    assert.equal(body.profile.version, '2.2.1');
+    assert.equal(body.profile.alightImportSafe, true);
     assert.equal(body.grouping.groupedColors, 1);
     assert.equal(body.grouping.outputLayers, 1);
+    assert.match(body.xml, /outTime="1000"/);
+    assert.match(body.xml, /<fillColor value="#FF000000" \/>/);
   });
 });
 

@@ -47,10 +47,35 @@ test('Color Groups converts 100 flat-color shapes with 10 colors into 10 layers'
   assert.equal(out.grouping.geometryMerged, false);
   assert.equal(out.grouping.preservesInternalShapes, true);
   assert.equal(out.stats.outputShapes, 10);
-  assert.equal((out.xml.match(/label="Color \d{2} · #[0-9a-f]{6}"/gi) || []).length, 10);
+  assert.equal(out.profile.version, '2.2.1');
+  assert.equal(out.profile.alightImportSafe, true);
+  assert.equal((out.xml.match(/label="Color \d{2} - #[0-9a-f]{6}"/gi) || []).length, 10);
   assert.equal((out.xml.match(/<shape\b/g) || []).length, 100);
+  assert.equal((out.xml.match(/<embedScene\b[^>]*\boutTime="\d+"/g) || []).length, 11);
+  assert.equal((out.xml.match(/<fillColor value="#FF000000" \/>/g) || []).length, 10);
+  assert.match(out.xml, /<fillColor value="#ff000000" \/>/);
+  assert.doesNotMatch(out.xml, /<scene title="Color \d{2}/);
   assert.equal(out.grouping.zOrderBarriers, 0);
   assert.equal(out.fidelity.losses.some((loss) => loss.code === 'color-group-zorder'), false);
+});
+
+test('Color Groups emits Alight-safe group wrappers', () => {
+  const svg = `<svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+    <rect id="red" x="0" y="0" width="24" height="24" fill="#ff0000"/>
+    <rect id="blue" x="32" y="32" width="24" height="24" fill="#0000ff"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'color-groups', duration: 1800, fps: 60 });
+
+  const embedTags = out.xml.match(/<embedScene\b[^>]*>/g) || [];
+  assert.equal(embedTags.length, 3);
+  for (const tag of embedTags) {
+    assert.match(tag, /outTime="1800"/);
+  }
+  assert.match(out.xml, /label="Color 01 - #[0-9A-F]{6}"/);
+  assert.match(out.xml, /label="Color 02 - #[0-9A-F]{6}"/);
+  assert.equal((out.xml.match(/<scene title=""/g) || []).length >= 3, true);
+  assert.doesNotMatch(out.xml, /·/);
+  assert.doesNotMatch(out.xml, /\b(?:NaN|Infinity|undefined)\b/);
 });
 
 test('Color Groups keeps overlapping same-color source shapes separate inside one color layer', () => {

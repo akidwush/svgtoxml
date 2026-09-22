@@ -1,6 +1,6 @@
 const catalog = {
   ok: true,
-  version: '2.2.0',
+  version: '2.2.1',
   engines: [
     {
       id: 'maximum-fidelity',
@@ -32,7 +32,7 @@ const catalog = {
     fps: { min: 1, max: 240, default: 30 },
     durationMs: { min: 100, max: 600000, default: 1000 },
     smallPatchCleanup: { patchAreaPercent: 0.01, protectThinPercent: 2.0, thinAspectRatio: 6 },
-    colorGroups: { geometryMerged: false, preservesInternalShapes: true, zOrderAudit: 'overlap-aware' }
+    colorGroups: { geometryMerged: false, preservesInternalShapes: true, zOrderAudit: 'overlap-aware', alightImportSafe: true }
   },
   convert: {
     endpoint: '/api/v1/convert',
