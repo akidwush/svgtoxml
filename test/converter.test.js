@@ -52,7 +52,8 @@ test('Color Groups converts 100 flat-color shapes with 10 colors into 10 layers'
   assert.equal((out.xml.match(/label="Color \d{2} - #[0-9a-f]{6}"/gi) || []).length, 10);
   assert.equal((out.xml.match(/<shape\b/g) || []).length, 100);
   assert.equal((out.xml.match(/<embedScene\b[^>]*\boutTime="\d+"/g) || []).length, 11);
-  assert.equal((out.xml.match(/<fillColor value="#FF000000" \/>/g) || []).length >= 11, true);
+  assert.equal((out.xml.match(/<fillColor value="#FF000000" \/>/g) || []).length, 10);
+  assert.match(out.xml, /<fillColor value="#ff000000" \/>/);
   assert.doesNotMatch(out.xml, /<scene title="Color \d{2}/);
   assert.equal(out.grouping.zOrderBarriers, 0);
   assert.equal(out.fidelity.losses.some((loss) => loss.code === 'color-group-zorder'), false);
@@ -72,7 +73,7 @@ test('Color Groups emits Alight-safe group wrappers', () => {
   }
   assert.match(out.xml, /label="Color 01 - #[0-9A-F]{6}"/);
   assert.match(out.xml, /label="Color 02 - #[0-9A-F]{6}"/);
-  assert.equal((out.xml.match(/<scene title=""\b/g) || []).length >= 3, true);
+  assert.equal((out.xml.match(/<scene title=""/g) || []).length >= 3, true);
   assert.doesNotMatch(out.xml, /·/);
   assert.doesNotMatch(out.xml, /\b(?:NaN|Infinity|undefined)\b/);
 });
