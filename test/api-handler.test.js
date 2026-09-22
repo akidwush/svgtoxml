@@ -28,7 +28,7 @@ test('health advertises v2 engines and GET/POST API', async () => {
   const response = await healthHandler.fetch(new Request('https://example.test/api/health'));
   assert.equal(response.status, 200);
   const body = await response.json();
-  assert.equal(body.version, '2.1.0');
+  assert.equal(body.version, '2.2.0');
   assert.deepEqual(body.engines, ['maximum-fidelity', 'color-groups', 'small-patch-cleanup']);
   assert.deepEqual(body.externalApiMethods, ['GET', 'POST']);
 });

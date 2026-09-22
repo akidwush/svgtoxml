@@ -43,10 +43,45 @@ test('Color Groups converts 100 flat-color shapes with 10 colors into 10 layers'
   assert.equal(out.grouping.groupedColors, 10);
   assert.equal(out.grouping.outputLayers, 10);
   assert.equal(out.grouping.mergedShapes, 90);
+  assert.equal(out.grouping.packedShapes, 90);
+  assert.equal(out.grouping.geometryMerged, false);
+  assert.equal(out.grouping.preservesInternalShapes, true);
   assert.equal(out.stats.outputShapes, 10);
   assert.equal((out.xml.match(/label="Color \d{2} · #[0-9a-f]{6}"/gi) || []).length, 10);
-  assert.ok(out.grouping.zOrderBarriers > 0);
-  assert.ok(out.fidelity.losses.some((loss) => loss.code === 'color-group-merge'));
+  assert.equal((out.xml.match(/<shape\b/g) || []).length, 100);
+  assert.equal(out.grouping.zOrderBarriers, 0);
+  assert.equal(out.fidelity.losses.some((loss) => loss.code === 'color-group-zorder'), false);
+});
+
+test('Color Groups keeps overlapping same-color source shapes separate inside one color layer', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <rect id="red-back" x="10" y="10" width="60" height="60" fill="#ff0000"/>
+    <rect id="red-front" x="30" y="30" width="60" height="60" fill="#ff0000"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'color-groups' });
+
+  assert.equal(out.grouping.groupedColors, 1);
+  assert.equal(out.grouping.outputLayers, 1);
+  assert.equal(out.grouping.geometryMerged, false);
+  assert.equal(out.grouping.preservesInternalShapes, true);
+  assert.equal((out.xml.match(/<shape\b/g) || []).length, 2);
+  assert.match(out.xml, /label="red-back"/);
+  assert.match(out.xml, /label="red-front"/);
+});
+
+test('Color Groups reports only real overlapping z-order conflicts', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <rect id="red-back" x="0" y="0" width="80" height="80" fill="#ff0000"/>
+    <rect id="blue-mid" x="10" y="10" width="80" height="80" fill="#0000ff"/>
+    <rect id="red-front" x="20" y="20" width="70" height="70" fill="#ff0000"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'color-groups' });
+
+  assert.equal(out.grouping.groupedColors, 2);
+  assert.ok(out.grouping.overlapConstraints >= 2);
+  assert.equal(out.grouping.zOrderConflicts, 1);
+  assert.equal(out.grouping.zOrderBarriers, 1);
+  assert.equal(out.profile.preservesSourceOrder, false);
   assert.ok(out.fidelity.losses.some((loss) => loss.code === 'color-group-zorder'));
 });
 
@@ -61,6 +96,21 @@ test('Color Groups keeps complex paint as fallback instead of destructive merge'
   assert.equal(out.grouping.fallbackLayers, 1);
   assert.equal(out.grouping.outputLayers, 2);
   assert.match(out.xml, /<path-stroke/);
+});
+
+test('Color Groups isolates filter or mask affected shapes from color packing', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <defs><filter id="fx"><feGaussianBlur stdDeviation="1"/></filter></defs>
+    <rect id="safe-red" x="0" y="0" width="20" height="20" fill="#ff0000"/>
+    <rect id="filtered-red" x="30" y="0" width="20" height="20" fill="#ff0000" filter="url(#fx)"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'color-groups' });
+
+  assert.equal(out.grouping.groupedColors, 1);
+  assert.equal(out.grouping.fallbackLayers, 1);
+  assert.equal(out.grouping.outputLayers, 2);
+  assert.match(out.xml, /label="filtered-red"/);
+  assert.ok(out.fidelity.losses.some((loss) => loss.code === 'filter'));
 });
 
 test('Small Patch Cleanup removes tiny islands but keeps main silhouette', () => {

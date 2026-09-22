@@ -186,7 +186,7 @@ convertBtn.addEventListener('click', async () => {
       stat('Shape sumber', data.grouping?.inputShapes ?? 0),
       stat('Warna digrup', data.grouping?.groupedColors ?? 0),
       stat('Layer output', data.grouping?.outputLayers ?? data.stats.outputShapes ?? 0),
-      stat('Shape digabung', data.grouping?.mergedShapes ?? 0),
+      stat('Shape dipaketkan', data.grouping?.packedShapes ?? data.grouping?.mergedShapes ?? 0),
       stat('Fallback kompleks', data.grouping?.fallbackLayers ?? 0),
       stat('Z-order barrier', data.grouping?.zOrderBarriers ?? 0),
       stat('Ukuran XML', `${((data.stats.outputBytes || 0) / 1024).toFixed(1)} KB`)
@@ -221,7 +221,7 @@ convertBtn.addEventListener('click', async () => {
     if (patchMode) {
       status.textContent = `Selesai · ${data.cleanup?.removedSubpaths || 0} subpath kecil + ${data.cleanup?.removedShapes || 0} shape mikro dibuang · z-order/stroke tetap dipertahankan.`;
     } else if (colorMode) {
-      status.textContent = `Selesai · ${data.grouping?.inputShapes || 0} shape → ${data.grouping?.outputLayers || 0} layer · ${data.grouping?.groupedColors || 0} warna digrup.`;
+      status.textContent = `Selesai · ${data.grouping?.inputShapes || 0} shape → ${data.grouping?.outputLayers || 0} layer · ${data.grouping?.groupedColors || 0} warna · geometri internal tetap terpisah.`;
     } else {
       status.textContent = `Selesai · ${data.stats.outputShapes} shape · Maximum Fidelity strict.`;
     }
