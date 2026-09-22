@@ -98,6 +98,21 @@ test('Color Groups keeps complex paint as fallback instead of destructive merge'
   assert.match(out.xml, /<path-stroke/);
 });
 
+test('Color Groups isolates filter or mask affected shapes from color packing', () => {
+  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <defs><filter id="fx"><feGaussianBlur stdDeviation="1"/></filter></defs>
+    <rect id="safe-red" x="0" y="0" width="20" height="20" fill="#ff0000"/>
+    <rect id="filtered-red" x="30" y="0" width="20" height="20" fill="#ff0000" filter="url(#fx)"/>
+  </svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'color-groups' });
+
+  assert.equal(out.grouping.groupedColors, 1);
+  assert.equal(out.grouping.fallbackLayers, 1);
+  assert.equal(out.grouping.outputLayers, 2);
+  assert.match(out.xml, /label="filtered-red"/);
+  assert.ok(out.fidelity.losses.some((loss) => loss.code === 'filter'));
+});
+
 test('Small Patch Cleanup removes tiny islands but keeps main silhouette', () => {
   const dots = Array.from({ length: 10 }, (_, i) => {
     const x = 5 + i * 2;
