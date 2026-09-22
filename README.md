@@ -1,9 +1,9 @@
-# SVG → Alight Motion XML v2.1
+# SVG → Alight Motion XML v2.2
 
 Engine SVG ke XML Alight Motion sekarang memiliki **tiga mode**:
 
 1. **Maximum Fidelity** — pipeline strict yang mempertahankan z-order, native stroke, gradient, clipPath geometris, group opacity, dan presisi tinggi.
-2. **Color Groups** — clone pipeline geometri Maximum Fidelity untuk SVG trace flat-color; semua shape dengan fill solid identik digabung menjadi satu layer warna. Contoh: 100 shape dengan 10 warna solid → 10 layer warna dalam satu group.
+2. **Color Groups** — clone pipeline geometri Maximum Fidelity untuk SVG trace flat-color; shape dengan fill solid identik dipaketkan ke satu layer warna tanpa menyatukan geometri path internal. Contoh: 100 shape dengan 10 warna solid → 10 layer warna dalam satu group.
 3. **Small Patch Cleanup** — memakai pipeline Maximum Fidelity yang sama, lalu membuang island/subpath SVG yang sangat kecil.
 
 Engine lama `optimized`, `accurate`, `balanced`, dan `lightweight` tidak lagi tersedia sebagai mode eksekusi. Nilai quality lama/asing akan fallback ke Maximum Fidelity.
@@ -138,4 +138,4 @@ Small Patch Cleanup secara sengaja menandai fidelity sebagai degraded bila ada p
 
 ## Color Groups behavior
 
-Untuk SVG trace flat-color, engine ini menargetkan **1 fill solid unik = 1 layer**. Jika 100 shape memakai tepat 10 warna solid, hasil normalnya adalah 10 layer warna di dalam group SVG utama. Shape kompleks dengan gradient, stroke, transparency, atau clip/mask yang tidak aman digabung akan dipertahankan sebagai fallback layer terpisah. Karena grouping global per warna dapat memindahkan z-order ketika warna yang sama muncul terpisah oleh warna lain, response mengembalikan `grouping.zOrderBarriers` dan fidelity loss `color-group-zorder` bila kondisi itu terdeteksi.
+Untuk SVG trace flat-color, engine ini menargetkan **1 fill solid unik = 1 layer**. Jika 100 shape memakai tepat 10 warna solid, hasil normalnya adalah 10 layer warna di dalam group SVG utama. Mulai v2.2, geometri tiap source shape tidak lagi digabung menjadi satu compound path; source shape tetap terpisah di dalam layer warnanya untuk menghindari perubahan winding/hole pada overlap sewarna. Shape kompleks dengan gradient, stroke, transparency, atau clip/mask tetap menjadi fallback layer terpisah. Audit z-order sekarang overlap-aware: `grouping.zOrderBarriers` hanya naik bila ada konflik overlap lintas warna yang benar-benar tidak dapat dipertahankan dengan aturan 1 warna = 1 layer. Metadata tambahan: `geometryMerged: false`, `preservesInternalShapes: true`, `overlapConstraints`, dan `zOrderConflicts`.
