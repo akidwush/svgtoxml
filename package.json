@@ -1,6 +1,6 @@
 {
   "name": "svg2xml-alight",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "private": true,
   "type": "module",
   "description": "SVG to Alight Motion XML converter with Maximum Fidelity, Color Groups, and Small Patch Cleanup engines plus reusable GET/POST API.",
