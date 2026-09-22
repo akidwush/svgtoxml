@@ -1,6 +1,6 @@
 const catalog = {
   ok: true,
-  version: '2.1.0',
+  version: '2.2.0',
   engines: [
     {
       id: 'maximum-fidelity',
@@ -13,7 +13,7 @@ const catalog = {
       id: 'color-groups',
       quality: 'color-group',
       aliases: ['color-group', 'group-by-color', 'color-fidelity'],
-      description: 'Maximum Fidelity geometry parsing plus exact solid-fill grouping: 100 shapes with 10 solid colors become 10 color layers when the SVG is flat-color compatible.',
+      description: 'Maximum Fidelity geometry parsing plus fidelity-safe color packing: 100 shapes with 10 solid colors become 10 top-level color layers while original source shapes remain separate inside each color layer.',
       options: ['title', 'duration', 'fps']
     },
     {
@@ -31,7 +31,8 @@ const catalog = {
     primitiveFallback: 'path',
     fps: { min: 1, max: 240, default: 30 },
     durationMs: { min: 100, max: 600000, default: 1000 },
-    smallPatchCleanup: { patchAreaPercent: 0.01, protectThinPercent: 2.0, thinAspectRatio: 6 }
+    smallPatchCleanup: { patchAreaPercent: 0.01, protectThinPercent: 2.0, thinAspectRatio: 6 },
+    colorGroups: { geometryMerged: false, preservesInternalShapes: true, zOrderAudit: 'overlap-aware' }
   },
   convert: {
     endpoint: '/api/v1/convert',
