@@ -8,7 +8,7 @@ async function health(request) {
   const base = {
     ok: true,
     service: 'svg2xml-alight',
-    version: '2.2.1',
+    version: '2.3.0',
     runtime: `node-${process.versions.node}`,
     engines: ['maximum-fidelity', 'color-groups', 'small-patch-cleanup'],
     publicWebEndpoint: '/api/convert',
@@ -16,7 +16,13 @@ async function health(request) {
     externalApiMethods: ['GET', 'POST'],
     enginesEndpoint: '/api/v1/engines',
     externalApiAuth: keys.configured ? 'api-key-required' : 'not-configured',
-    configuredApiKeys: keys.count
+    configuredApiKeys: keys.count,
+    compatibility: {
+      contract: 'alight-xml-compatibility-v1',
+      profile: 'alight-5.0.273-android-ff106',
+      allEnginesValidated: true,
+      failClosed: true
+    }
   };
 
   if (deep) {

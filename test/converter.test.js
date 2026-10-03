@@ -47,7 +47,7 @@ test('Color Groups converts 100 flat-color shapes with 10 colors into 10 layers'
   assert.equal(out.grouping.geometryMerged, false);
   assert.equal(out.grouping.preservesInternalShapes, true);
   assert.equal(out.stats.outputShapes, 10);
-  assert.equal(out.profile.version, '2.2.1');
+  assert.equal(out.profile.version, '2.3.0');
   assert.equal(out.profile.alightImportSafe, true);
   assert.equal((out.xml.match(/label="Color \d{2} - #[0-9a-f]{6}"/gi) || []).length, 10);
   assert.equal((out.xml.match(/<shape\b/g) || []).length, 100);
