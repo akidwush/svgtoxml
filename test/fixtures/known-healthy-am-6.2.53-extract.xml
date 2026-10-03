@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!--
+Representative structural extract from the known-working Alight Motion export:
+all-tools-nexora/assets/data/nexora/logo/template-head.xml @ e1a89ecf2b0d51a9d78bf457f4caf4cffe457b88.
+The source export is Alight Motion 6.2.53 (859), ffver 107, iOS.
+It deliberately preserves two observed facts: IDs are scoped per scene, and a
+healthy embedScene may omit outTime. This extract is a contract reference, not
+a claim that the shortened document itself was manually imported.
+-->
+<scene title="Nexora Tools Logo Animate" width="1440" height="1080" exportWidth="1920" exportHeight="1080" bgcolor="#FF000000" totalTime="8333" fps="60" modifiedTime="1786804307288" amver="859" ffver="107" am="com.alightcreative.motion/6.2.53" amplatform="ios" precompose="dynamicResolution" retime="freeze">
+  <embedScene id="53" label="Background" startTime="0" endTime="8333" fillType="intrinsic" outTime="8333">
+    <transform>
+      <location value="895.699463,410.027832,0.000000"/>
+      <scale value="1.389338,1.389338"/>
+    </transform>
+    <fillColor value="#FF000000"/>
+    <scene title="" width="3859" height="2771" exportWidth="1920" exportHeight="1080" bgcolor="#00000000" totalTime="8333" fps="60" modifiedTime="0" amver="859" ffver="107" am="com.alightcreative.motion/6.2.53" amplatform="ios" precompose="dynamicResolution" retime="off">
+      <shape id="1" label="Rectangle 1" startTime="0" endTime="8333" fillType="color" s=".rect">
+        <transform>
+          <location value="1789.602661,1535.405029,0.000000"/>
+          <scale value="7.200000,7.200000"/>
+        </transform>
+        <fillColor value="#FF3A3F42"/>
+        <property name="size" type="vec2" value="141.000000,100.000000"/>
+      </shape>
+      <embedScene id="9" label="Group and Mask 1" startTime="34" endTime="2117" fillType="color">
+        <transform><location value="722.000000,542.000000,0.000000"/></transform>
+        <scene title="" width="1444" height="1084" exportWidth="1920" exportHeight="1080" bgcolor="#00000000" totalTime="2083" fps="60" modifiedTime="0" amver="859" ffver="107" am="com.alightcreative.motion/6.2.53" amplatform="ios" precompose="dynamicResolution" retime="off">
+          <shape id="1" label="Rectangle 1" startTime="0" endTime="1999" fillType="color" s=".rect">
+            <transform><location value="720.000000,540.000000,0.000000"/></transform>
+            <fillColor value="#FF5ABCD9"/>
+            <property name="size" type="vec2" value="141.000000,100.000000"/>
+          </shape>
+        </scene>
+      </embedScene>
+    </scene>
+  </embedScene>
+</scene>

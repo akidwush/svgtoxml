@@ -1,14 +1,15 @@
 {
   "name": "svg2xml-alight",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "private": true,
   "type": "module",
   "description": "SVG to Alight Motion XML converter with Maximum Fidelity, Color Groups, and Small Patch Cleanup engines plus reusable GET/POST API.",
   "scripts": {
     "test": "node --test",
-    "check": "node --check api/convert.js && node --check api/health.js && node --check api/v1/convert.js && node --check api/v1/health.js && node --check api/v1/auth.js && node --check api/v1/engines.js && node --check lib/api-auth.js && node --check lib/api-http.js && node --check lib/path-geometry.js && node --check lib/converter.js && node --check app.js"
+    "check": "node --check api/convert.js && node --check api/health.js && node --check api/v1/convert.js && node --check api/v1/health.js && node --check api/v1/auth.js && node --check api/v1/engines.js && node --check lib/api-auth.js && node --check lib/api-http.js && node --check lib/alight-compatibility.js && node --check lib/path-geometry.js && node --check lib/converter.js && node --check app.js"
   },
   "dependencies": {
+    "@xmldom/xmldom": "0.9.12",
     "cheerio": "1.2.0",
     "color-name": "2.1.1",
     "svg-path-bounds": "1.0.2",

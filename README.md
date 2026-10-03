@@ -1,4 +1,4 @@
-# SVG → Alight Motion XML v2.2.1
+# SVG → Alight Motion XML v2.3.0
 
 Engine SVG ke XML Alight Motion sekarang memiliki **tiga mode**:
 
@@ -7,6 +7,18 @@ Engine SVG ke XML Alight Motion sekarang memiliki **tiga mode**:
 3. **Small Patch Cleanup** — memakai pipeline Maximum Fidelity yang sama, lalu membuang island/subpath SVG yang sangat kecil.
 
 Engine lama `optimized`, `accurate`, `balanced`, dan `lightweight` tidak lagi tersedia sebagai mode eksekusi. Nilai quality lama/asing akan fallback ke Maximum Fidelity.
+
+## Compatibility safety gate
+
+Mulai v2.3.0, ketiga engine memakai alur fail-closed yang sama:
+
+```text
+generate → parse XML nyata → validasi compatibility profile → return
+```
+
+Output hanya diberi `profile.alightImportSafe: true` setelah lolos pemeriksaan XML well-formed, UTF-8, satu root scene, metadata schema tunggal, rentang numerik, timeline nested scene, ID per scene scope, struktur shape/property, dan grammar path. Kegagalan menghasilkan `ALIGHT_XML_COMPATIBILITY_FAILED` dengan HTTP 422; XML mentah tidak dikembalikan.
+
+Compatibility profile generator tetap memakai tuple legacy Android 5.0.273/ffver 106 secara konsisten pada root dan nested scene. Fixture nyata Alight Motion 6.2.53/ffver 107/iOS dipakai sebagai referensi struktur, bukan sebagai alasan mengganti string versi tanpa bukti schema. Status automated compatibility bukan pengganti uji import pada aplikasi Alight Motion nyata.
 
 ## Endpoint
 
