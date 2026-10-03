@@ -10,12 +10,26 @@ const statsEl = $('stats');
 const warningsEl = $('warnings');
 const downloadBtn = $('downloadBtn');
 const quality = $('quality');
+const projectName = $('projectName');
 
 let lastXml = '';
 let lastBaseName = 'alight-motion';
 let selectedSvgText = '';
 let selectedFileSignature = '';
 let fileReadPromise = null;
+
+projectName.addEventListener('input', () => {
+  projectName.dataset.touched = '1';
+});
+
+function normalizedProjectName(value, fallback = 'Alight Motion Project') {
+  const clean = String(value || '')
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  return clean || fallback;
+}
 
 const PRESETS = {
   lossless: { patchAreaPercent: 0.01, protectThinPercent: 2.0 },
@@ -78,6 +92,9 @@ fileInput.addEventListener('change', () => {
   }
 
   lastBaseName = file.name.replace(/\.svg$/i, '') || 'alight-motion';
+  if (!projectName.dataset.touched || !projectName.value.trim()) {
+    projectName.value = normalizedProjectName(lastBaseName);
+  }
   const signature = fileSignature(file);
   convertBtn.disabled = true;
   fileMeta.textContent = 'Membaca SVG…';
@@ -144,7 +161,7 @@ convertBtn.addEventListener('click', async () => {
       body: JSON.stringify({
         svg: selectedSvgText,
         options: {
-          title: lastBaseName,
+          title: normalizedProjectName(projectName.value, lastBaseName),
           quality: quality.value,
           patchAreaPercent: Number($('patchAreaPercent').value),
           protectThinPercent: Number($('protectThinPercent').value),
