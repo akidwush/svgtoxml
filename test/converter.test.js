@@ -326,3 +326,23 @@ test('unsupported or transformed primitives stay on path fallback', () => {
   assert.ok(out.stats.primitiveFallback >= 2);
   assert.match(out.xml, /<path d=/);
 });
+
+test('every converter mode returns only compatibility-validated XML', () => {
+  const svg = `<svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+    <g transform="translate(2 3)">
+      <path d="M2 2 C8 0 12 8 18 4" fill="none" stroke="#123456" stroke-width="2"/>
+      <rect x="8" y="12" width="24" height="20" fill="#abcdef"/>
+    </g>
+  </svg>`;
+
+  for (const quality of ['maximum-fidelity', 'color-groups', 'small-patch-cleanup']) {
+    const out = convertSvgToAlightXml(svg, { quality, duration: 1800, fps: 60 });
+    assert.equal(out.profile.alightImportSafe, true, `${quality} must be gated`);
+    assert.equal(out.validation.compatibility.ok, true, `${quality} must expose validation result`);
+    assert.equal(out.validation.compatibility.profile, 'alight-5.0.273-android-ff106');
+    assert.ok(out.validation.compatibility.checks.includes('xml-well-formed'));
+    for (const tag of out.xml.match(/<embedScene\b[^>]*>/g) || []) {
+      assert.match(tag, /\boutTime="\d+"/, `${quality} emitted an ambiguous embedScene timeline`);
+    }
+  }
+});

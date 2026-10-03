@@ -114,6 +114,9 @@ test('external POST remains supported', async () => {
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.equal(body.profile.quality, 'lossless');
+    assert.equal(body.profile.alightImportSafe, true);
+    assert.equal(body.validation.compatibility.ok, true);
+    assert.equal(body.validation.compatibility.profile, 'alight-5.0.273-android-ff106');
   });
 });
 
