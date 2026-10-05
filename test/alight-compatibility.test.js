@@ -22,7 +22,7 @@ function validXml(inner = '') {
     <transform><location value="50,50,0"/></transform>
     <fillColor value="#ff000000"/>
     <scene title="" width="100" height="100" exportWidth="100" exportHeight="100" bgcolor="#00000000" totalTime="1000" fps="30" modifiedTime="0" ${alightSchemaAttributes({ nested: true })}>
-      ${inner || '<shape id="1" label="Path" startTime="0" endTime="1000" fillType="color" mediaFillMode="fill"><transform><location value="50,50,0"/></transform><fillColor value="#ffffffff"/><path d="M-10 -10L10 -10L10 10L-10 10Z"/></shape>'}
+      ${inner || '<shape id="1" label="Path" startTime="0" endTime="1000" fillType="color" mediaFillMode="fill"><transform><location value="50,50,0"/></transform><fillColor value="#ffffffff"/><parameter><contour d="M-10 -10L10 -10L10 10L-10 10Z"/></parameter></shape>'}
     </scene>
   </embedScene>
 </scene>`;
@@ -86,6 +86,18 @@ test('compatibility validator rejects malformed and incompatible XML fail closed
     valid.replace('width="100"', 'width="-1"')
   ];
   cases.forEach(expectCompatibilityFailure);
+});
+
+test('compatibility validator rejects direct path children that Alight Motion cannot import as shapes', () => {
+  const valid = validXml();
+  const legacy = valid
+    .replace('<parameter><contour ', '<path ')
+    .replace('/></parameter></shape>', '/></shape>');
+
+  assert.throws(
+    () => validateAlightImportXml(legacy),
+    (error) => error.code === 'ALIGHT_XML_COMPATIBILITY_FAILED' && /<path> legacy/.test(error.message)
+  );
 });
 
 test('layer IDs are unique per scene scope, not globally', () => {

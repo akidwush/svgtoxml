@@ -47,7 +47,7 @@ test('Color Groups converts 100 flat-color shapes with 10 colors into 10 layers'
   assert.equal(out.grouping.geometryMerged, false);
   assert.equal(out.grouping.preservesInternalShapes, true);
   assert.equal(out.stats.outputShapes, 10);
-  assert.equal(out.profile.version, '2.3.0');
+  assert.equal(out.profile.version, '2.3.1');
   assert.equal(out.profile.alightImportSafe, true);
   assert.equal((out.xml.match(/label="Color \d{2} - #[0-9a-f]{6}"/gi) || []).length, 10);
   assert.equal((out.xml.match(/<shape\b/g) || []).length, 100);
@@ -315,7 +315,7 @@ test('primitive detection emits conservative native rectangle and can fall back 
     detectPrimitives: false
   });
   assert.doesNotMatch(path.xml, /s="\.rect"/);
-  assert.match(path.xml, /<path d=/);
+  assert.match(path.xml, /<parameter>\s*<contour d=/);
   assert.equal(path.stats.primitiveOutput, 0);
 });
 
@@ -324,7 +324,7 @@ test('unsupported or transformed primitives stay on path fallback', () => {
   const out = convertSvgToAlightXml(svg, { quality: 'maximum-fidelity', detectPrimitives: true });
   assert.equal(out.stats.primitiveOutput, 0);
   assert.ok(out.stats.primitiveFallback >= 2);
-  assert.match(out.xml, /<path d=/);
+  assert.match(out.xml, /<parameter>\s*<contour d=/);
 });
 
 test('every converter mode returns only compatibility-validated XML', () => {
@@ -341,6 +341,8 @@ test('every converter mode returns only compatibility-validated XML', () => {
     assert.equal(out.validation.compatibility.ok, true, `${quality} must expose validation result`);
     assert.equal(out.validation.compatibility.profile, 'alight-5.0.273-android-ff106');
     assert.ok(out.validation.compatibility.checks.includes('xml-well-formed'));
+    assert.match(out.xml, /<parameter>\s*<contour d=/, `${quality} must emit native imported-shape contours`);
+    assert.doesNotMatch(out.xml, /<shape\b[^>]*>[\s\S]*?<path\s+d=/, `${quality} must not emit direct path children`);
     for (const tag of out.xml.match(/<embedScene\b[^>]*>/g) || []) {
       assert.match(tag, /\boutTime="\d+"/, `${quality} emitted an ambiguous embedScene timeline`);
     }
