@@ -9,6 +9,7 @@ import {
   validateAlightImportXml
 } from '../lib/alight-compatibility.js';
 import { convertSvgToAlightXml } from '../lib/converter.js';
+import { MAX_ALIGHT_PATH_CHARS } from '../lib/path-geometry.js';
 
 const knownHealthyExtract = readFileSync(
   fileURLToPath(new URL('./fixtures/known-healthy-am-6.2.53-extract.xml', import.meta.url)),
@@ -86,6 +87,12 @@ test('compatibility validator rejects malformed and incompatible XML fail closed
     valid.replace('width="100"', 'width="-1"')
   ];
   cases.forEach(expectCompatibilityFailure);
+});
+
+test('compatibility validator rejects a path above the Android importer budget', () => {
+  const oversized = `M 0 0${'L 1.123456 1.123456'.repeat(500)}`;
+  assert.ok(oversized.length > MAX_ALIGHT_PATH_CHARS);
+  expectCompatibilityFailure(validXml().replace('M-10 -10L10 -10L10 10L-10 10Z', oversized));
 });
 
 test('layer IDs are unique per scene scope, not globally', () => {

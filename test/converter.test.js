@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { convertSvgToAlightXml } from '../lib/converter.js';
+import { MAX_ALIGHT_PATH_CHARS } from '../lib/path-geometry.js';
 
 test('Maximum Fidelity preserves source order, native stroke and exact geometry', () => {
   const svg = `<svg width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
@@ -47,7 +48,7 @@ test('Color Groups converts 100 flat-color shapes with 10 colors into 10 layers'
   assert.equal(out.grouping.geometryMerged, false);
   assert.equal(out.grouping.preservesInternalShapes, true);
   assert.equal(out.stats.outputShapes, 10);
-  assert.equal(out.profile.version, '2.3.0');
+  assert.equal(out.profile.version, '2.3.1');
   assert.equal(out.profile.alightImportSafe, true);
   assert.equal((out.xml.match(/label="Color \d{2} - #[0-9a-f]{6}"/gi) || []).length, 10);
   assert.equal((out.xml.match(/<shape\b/g) || []).length, 100);
@@ -345,4 +346,20 @@ test('every converter mode returns only compatibility-validated XML', () => {
       assert.match(tag, /\boutTime="\d+"/, `${quality} emitted an ambiguous embedScene timeline`);
     }
   }
+});
+
+test('oversized path is compacted below the Android importer attribute budget', () => {
+  const curves = Array.from({ length: 120 }, (_, index) => {
+    const x = index + 1;
+    return `C ${x}.123456 ${x}.654321, ${x}.234567 ${x}.765432, ${x}.345678 ${x}.876543`;
+  }).join('');
+  const svg = `<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg"><path d="M 0 0${curves}Z" fill="#123456"/></svg>`;
+  const out = convertSvgToAlightXml(svg, { quality: 'small-patch-cleanup' });
+  const generatedPath = out.xml.match(/<path d="([^"]+)"/)[1];
+
+  assert.ok(generatedPath.length <= MAX_ALIGHT_PATH_CHARS);
+  assert.match(out.xml, /<path d="M/);
+  assert.doesNotMatch(out.xml, /<parameter>|<contour/);
+  assert.equal(out.validation.compatibility.ok, true);
+  assert.ok(out.validation.compatibility.checks.includes('path-size-budget'));
 });

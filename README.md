@@ -1,4 +1,4 @@
-# SVG → Alight Motion XML v2.3.0
+# SVG → Alight Motion XML v2.3.1
 
 Engine SVG ke XML Alight Motion sekarang memiliki **tiga mode**:
 
@@ -19,6 +19,15 @@ generate → parse XML nyata → validasi compatibility profile → return
 Output hanya diberi `profile.alightImportSafe: true` setelah lolos pemeriksaan XML well-formed, UTF-8, satu root scene, metadata schema tunggal, rentang numerik, timeline nested scene, ID per scene scope, struktur shape/property, dan grammar path. Kegagalan menghasilkan `ALIGHT_XML_COMPATIBILITY_FAILED` dengan HTTP 422; XML mentah tidak dikembalikan.
 
 Compatibility profile generator tetap memakai tuple legacy Android 5.0.273/ffver 106 secara konsisten pada root dan nested scene. Fixture nyata Alight Motion 6.2.53/ffver 107/iOS dipakai sebagai referensi struktur, bukan sebagai alasan mengganti string versi tanpa bukti schema. Status automated compatibility bukan pengganti uji import pada aplikasi Alight Motion nyata.
+
+### Android long-path safety
+
+Output tetap memakai schema resmi direct `<path d="…" />` dari Alight Motion
+5.0.273. Path biasa tidak diubah. Jika satu atribut path melewati budget aman
+7.600 karakter, serializer memakai bentuk SVG compact dan menurunkan presisi hanya
+sampai batas tersebut tercapai (minimum dua desimal). Jika masih terlalu panjang,
+conversion berhenti dengan `ALIGHT_PATH_TOO_COMPLEX` dan tidak mengirim XML yang
+berisiko ditolak importer.
 
 ## Endpoint
 
