@@ -27,4 +27,4 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npm run benchmark:color-groups
-      - run: node scripts/benchmark-color-groups-overlap.mjs
+      - run: npm run benchmark:color-groups-overlap
