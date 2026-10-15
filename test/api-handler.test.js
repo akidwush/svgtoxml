@@ -24,12 +24,12 @@ test('Vercel handlers expose Web Handler fetch()', () => {
   assert.equal(typeof enginesHandler?.fetch, 'function');
 });
 
-test('health advertises v2 engines and GET/POST API', async () => {
+test('health advertises active v3 engines and GET/POST API', async () => {
   const response = await healthHandler.fetch(new Request('https://example.test/api/health'));
   assert.equal(response.status, 200);
   const body = await response.json();
-  assert.equal(body.version, '2.3.0');
-  assert.deepEqual(body.engines, ['maximum-fidelity', 'color-groups', 'small-patch-cleanup']);
+  assert.equal(body.version, '3.0.0');
+  assert.deepEqual(body.engines, ['maximum-fidelity', 'color-groups']);
   assert.deepEqual(body.externalApiMethods, ['GET', 'POST']);
 });
 
@@ -41,8 +41,9 @@ test('engine catalog is public and CORS-ready', async () => {
   assert.equal(response.headers.get('access-control-allow-origin'), '*');
   const body = await response.json();
   assert.equal(body.ok, true);
-  assert.equal(body.version, '2.3.0');
-  assert.equal(body.engines.length, 3);
+  assert.equal(body.version, '3.0.0');
+  assert.equal(body.engines.length, 2);
+  assert.equal(body.controls.colorGroups.engine, 'smart-color-groups');
   assert.equal(body.controls.colorGroups.alightImportSafe, true);
   assert.equal(body.controls.compatibility.allEnginesValidated, true);
   assert.equal(body.controls.compatibility.failClosed, true);
@@ -68,18 +69,18 @@ test('external GET conversion requires API key', async () => {
   });
 });
 
-test('external GET conversion works for small SVG and engine alias', async () => {
+test('removed Small Patch alias returns ENGINE_NOT_SUPPORTED', async () => {
   await withEnv('SVG2XML_API_KEY', 'amx_live_test-secret', async () => {
     const svg = encodeURIComponent('<svg width="10" height="10"><rect width="10" height="10" fill="red"/></svg>');
     const response = await v1ConvertHandler.fetch(new Request(
-      `https://example.test/api/v1/convert?engine=small-patch-cleanup&patchAreaPercent=0.01&svg=${svg}`,
+      `https://example.test/api/v1/convert?engine=small-patch-cleanup&svg=${svg}`,
       { headers: { 'x-api-key': 'amx_live_test-secret' } }
     ));
-    assert.equal(response.status, 200);
+    assert.equal(response.status, 422);
     const body = await response.json();
-    assert.equal(body.ok, true);
-    assert.equal(body.profile.quality, 'patch-clean');
-    assert.equal(body.api.authenticated, true);
+    assert.equal(body.ok, false);
+    assert.equal(body.code, 'ENGINE_NOT_SUPPORTED');
+    assert.equal(body.engine, 'small-patch-cleanup');
   });
 });
 
@@ -93,8 +94,8 @@ test('external GET supports Color Groups engine', async () => {
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.equal(body.profile.quality, 'color-group');
-    assert.equal(body.profile.engine, 'color-groups');
-    assert.equal(body.profile.version, '2.3.0');
+    assert.equal(body.profile.engine, 'smart-color-groups');
+    assert.equal(body.profile.version, '3.0.0');
     assert.equal(body.profile.alightImportSafe, true);
     assert.equal(body.grouping.groupedColors, 1);
     assert.equal(body.grouping.outputLayers, 1);

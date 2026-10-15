@@ -17,11 +17,13 @@ test('Maximum Fidelity preserves source order, native stroke and exact geometry'
   assert.ok(out.xml.indexOf('blue-front') < out.xml.indexOf('stroke-only'));
 });
 
-test('old engine names are removed and safely fall back to Maximum Fidelity', () => {
+test('unknown and removed engine names fail clearly', () => {
   const svg = '<svg width="10" height="10"><rect width="10" height="10" fill="red"/></svg>';
-  for (const quality of ['optimized', 'accurate', 'balanced', 'lightweight']) {
-    const out = convertSvgToAlightXml(svg, { quality });
-    assert.equal(out.profile.quality, 'lossless');
+  for (const quality of ['optimized', 'patch-clean', 'small-patch', 'small-patch-cleanup']) {
+    assert.throws(
+      () => convertSvgToAlightXml(svg, { quality }),
+      (error) => error?.code === 'ENGINE_NOT_SUPPORTED' && error?.engine === quality
+    );
   }
 });
 
@@ -37,7 +39,7 @@ test('Color Groups converts 100 flat-color shapes with 10 colors into 10 layers'
   const out = convertSvgToAlightXml(svg, { quality: 'color-groups' });
 
   assert.equal(out.profile.quality, 'color-group');
-  assert.equal(out.profile.engine, 'color-groups');
+  assert.equal(out.profile.engine, 'smart-color-groups');
   assert.equal(out.profile.groupedByColor, true);
   assert.equal(out.grouping.inputShapes, 100);
   assert.equal(out.grouping.groupedColors, 10);
@@ -47,7 +49,7 @@ test('Color Groups converts 100 flat-color shapes with 10 colors into 10 layers'
   assert.equal(out.grouping.geometryMerged, false);
   assert.equal(out.grouping.preservesInternalShapes, true);
   assert.equal(out.stats.outputShapes, 10);
-  assert.equal(out.profile.version, '2.3.0');
+  assert.equal(out.profile.version, '3.0.0');
   assert.equal(out.profile.alightImportSafe, true);
   assert.equal((out.xml.match(/label="Color \d{2} - #[0-9a-f]{6}"/gi) || []).length, 10);
   assert.equal((out.xml.match(/<shape\b/g) || []).length, 100);
@@ -138,100 +140,73 @@ test('Color Groups isolates filter or mask affected shapes from color packing', 
   assert.ok(out.fidelity.losses.some((loss) => loss.code === 'filter'));
 });
 
-test('Small Patch Cleanup removes tiny islands but keeps main silhouette', () => {
-  const dots = Array.from({ length: 10 }, (_, i) => {
-    const x = 5 + i * 2;
-    return `M${x} 5 L${x + 0.5} 5 L${x + 0.5} 5.5 L${x} 5.5 Z`;
-  }).join(' ');
-  const svg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <path id="main" fill="red" stroke="black" stroke-width="2" d="M10 20 L90 20 L90 90 L10 90 Z ${dots}"/>
+test('Smart Color Groups canonicalizes equivalent paint syntax and inheritance', () => {
+  const svg = `<svg width="120" height="20" xmlns="http://www.w3.org/2000/svg">
+    <style>.white { fill: rgb(255,255,255) } #last { fill: hsl(0 0% 100%) }</style>
+    <g fill="#fff" color="#ffffff">
+      <rect x="0" width="18" height="18"/>
+      <rect x="20" width="18" height="18" fill="currentColor"/>
+      <rect class="white" x="40" width="18" height="18"/>
+      <rect id="last" x="60" width="18" height="18"/>
+      <rect x="80" width="18" height="18" style="fill:rgba(255,255,255,1)"/>
+    </g>
   </svg>`;
-  const out = convertSvgToAlightXml(svg, {
-    quality: 'small-patch-cleanup',
-    patchAreaPercent: 0.01,
-    protectThinPercent: 3.5
-  });
-  assert.equal(out.profile.quality, 'patch-clean');
-  assert.equal(out.stats.outputShapes, 1);
-  assert.ok(out.cleanup.removedSubpaths >= 10);
-  assert.ok(out.cleanup.removedNodes > 0);
-  assert.match(out.xml, /<path-stroke[^>]*>/);
-  assert.equal(out.profile.nodeReduction, 0);
-  assert.equal(out.fidelity.exact, false);
-  assert.ok(out.fidelity.losses.some((loss) => loss.code === 'small-patch-cleanup'));
+  const out = convertSvgToAlightXml(svg, { quality: 'color-groups' });
+  assert.equal(out.grouping.groupedColors, 1);
+  assert.equal(out.grouping.solidCandidates, 5);
+  assert.ok(out.grouping.canonicalColorAliases >= 3);
+  assert.equal(out.grouping.fallbackLayers, 0);
 });
 
-test('Small Patch Cleanup can remove a standalone tiny shape', () => {
-  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-    <rect id="main" x="10" y="10" width="80" height="80" fill="red"/>
-    <rect id="dust" x="1" y="1" width=".5" height=".5" fill="blue"/>
+test('Smart Color Groups returns auditable fallback reasons for complex paint', () => {
+  const svg = `<svg width="120" height="120" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="g"><stop stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient></defs>
+    <rect width="20" height="20" fill="url(#g)"/>
+    <rect x="25" width="20" height="20" fill="red" opacity=".5"/>
+    <rect x="50" width="20" height="20" fill="red" stroke="black"/>
   </svg>`;
-  const out = convertSvgToAlightXml(svg, {
-    quality: 'patch-clean',
-    patchAreaPercent: 0.01,
-    protectThinPercent: 3.5
-  });
-  assert.equal(out.stats.outputShapes, 1);
-  assert.ok(out.cleanup.removedShapes >= 1);
-  assert.doesNotMatch(out.xml, /dust/);
+  const out = convertSvgToAlightXml(svg, { quality: 'color-groups' });
+  assert.equal(out.grouping.fallbackLayers, 3);
+  assert.equal(out.grouping.fallbackReasons.HAS_GRADIENT, 1);
+  assert.equal(out.grouping.fallbackReasons.PARTIAL_ALPHA, 1);
+  assert.equal(out.grouping.fallbackReasons.HAS_STROKE, 1);
+  assert.equal(out.stats.gradientsFlattened, 0);
 });
 
-test('Small Patch Cleanup protects long thin details', () => {
+test('Smart Color Groups ignores bbox overlap when a shape is inside a path hole', () => {
   const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-    <path id="thin-line" d="M5 50 L95 50 L95 50.1 L5 50.1 Z" fill="black"/>
+    <path id="donut" fill="red" fill-rule="evenodd" d="M0 0H100V100H0Z M30 30H70V70H30Z"/>
+    <rect id="inside-hole" x="40" y="40" width="20" height="20" fill="blue"/>
+    <path id="red-front" fill="red" d="M0 0H10V10H0Z"/>
   </svg>`;
-  const out = convertSvgToAlightXml(svg, {
-    quality: 'patch-clean',
-    patchAreaPercent: 0.5,
-    protectThinPercent: 3.5
-  });
-  assert.equal(out.stats.outputShapes, 1);
-  assert.equal(out.cleanup.removedShapes, 0);
-  assert.match(out.xml, /thin-line/);
+  const out = convertSvgToAlightXml(svg, { quality: 'color-groups' });
+  assert.ok(out.grouping.overlapCandidates >= 1);
+  assert.equal(out.grouping.actualOverlaps, 0);
+  assert.equal(out.grouping.zOrderConflicts, 0);
+  assert.equal(out.grouping.groupingExact, true);
 });
 
-
-test('Small Patch Cleanup default is more aggressive for compact micro patches', () => {
-  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-    <rect id="main" x="10" y="10" width="80" height="80" fill="red"/>
-    <rect id="dust-default" x="2" y="2" width="0.8" height="0.8" fill="blue"/>
+test('Smart Color Groups distinguishes touching from positive-area overlap', () => {
+  const svg = `<svg width="100" height="50" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="50" height="50" fill="red"/>
+    <rect x="50" y="0" width="50" height="50" fill="blue"/>
   </svg>`;
-  const out = convertSvgToAlightXml(svg, { quality: 'small-patch-cleanup' });
-  assert.equal(out.cleanup.patchAreaPercent, 0.01);
-  assert.equal(out.cleanup.protectThinPercent, 2);
-  assert.equal(out.cleanup.thinAspectRatio, 6);
-  assert.equal(out.stats.outputShapes, 1);
-  assert.ok(out.cleanup.removedShapes >= 1);
-  assert.doesNotMatch(out.xml, /dust-default/);
+  const out = convertSvgToAlightXml(svg, { quality: 'color-groups' });
+  assert.equal(out.grouping.zOrderConstraints, 0);
+  assert.equal(out.grouping.actualOverlaps, 0);
+  assert.equal(out.grouping.touchingPairs, 1);
 });
 
-test('Small Patch Cleanup removes compact patches even when one side crosses thin-protection length', () => {
+test('Smart Color Groups plan and audit metadata are deterministic by default', () => {
   const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-    <rect id="main" x="10" y="10" width="80" height="80" fill="red"/>
-    <rect id="compact-patch" x="2" y="2" width="2.5" height="1" fill="blue"/>
+    <rect x="0" y="0" width="60" height="60" fill="#f00"/>
+    <rect x="20" y="20" width="60" height="60" fill="blue"/>
+    <rect x="40" y="40" width="50" height="50" fill="rgb(255,0,0)"/>
   </svg>`;
-  const out = convertSvgToAlightXml(svg, {
-    quality: 'patch-clean',
-    patchAreaPercent: 0.05,
-    protectThinPercent: 2
-  });
-  assert.equal(out.stats.outputShapes, 1);
-  assert.ok(out.cleanup.removedShapes >= 1);
-  assert.doesNotMatch(out.xml, /compact-patch/);
-});
-
-test('Small Patch Cleanup still protects genuinely elongated thin detail', () => {
-  const svg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-    <path id="needle-detail" d="M5 40 L95 40 L95 40.2 L5 40.2 Z" fill="black"/>
-  </svg>`;
-  const out = convertSvgToAlightXml(svg, {
-    quality: 'patch-clean',
-    patchAreaPercent: 0.5,
-    protectThinPercent: 2
-  });
-  assert.equal(out.stats.outputShapes, 1);
-  assert.equal(out.cleanup.removedShapes, 0);
-  assert.match(out.xml, /needle-detail/);
+  const first = convertSvgToAlightXml(svg, { quality: 'color-groups' });
+  const second = convertSvgToAlightXml(svg, { quality: 'color-groups' });
+  assert.deepEqual(first.grouping, second.grouping);
+  assert.equal(first.grouping.timingsMs, undefined);
 });
 
 test('Maximum Fidelity keeps two-stop gradient and clipPath', () => {
@@ -335,7 +310,7 @@ test('every converter mode returns only compatibility-validated XML', () => {
     </g>
   </svg>`;
 
-  for (const quality of ['maximum-fidelity', 'color-groups', 'small-patch-cleanup']) {
+  for (const quality of ['maximum-fidelity', 'color-groups']) {
     const out = convertSvgToAlightXml(svg, { quality, duration: 1800, fps: 60 });
     assert.equal(out.profile.alightImportSafe, true, `${quality} must be gated`);
     assert.equal(out.validation.compatibility.ok, true, `${quality} must expose validation result`);
