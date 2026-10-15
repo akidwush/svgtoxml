@@ -1,6 +1,6 @@
 const catalog = {
   ok: true,
-  version: '2.3.0',
+  version: '3.0.0',
   engines: [
     {
       id: 'maximum-fidelity',
@@ -13,15 +13,8 @@ const catalog = {
       id: 'color-groups',
       quality: 'color-group',
       aliases: ['color-group', 'group-by-color', 'color-fidelity'],
-      description: 'Maximum Fidelity geometry parsing plus fidelity-safe color packing: 100 shapes with 10 solid colors become 10 top-level color layers while original source shapes remain separate inside each color layer.',
+      description: 'Scene-aware effective-paint grouping with topology checks, z-order conflict detection, safe fallback layers, and unmerged source geometry.',
       options: ['title', 'duration', 'fps']
-    },
-    {
-      id: 'small-patch-cleanup',
-      quality: 'patch-clean',
-      aliases: ['patch-clean', 'small-patch'],
-      description: 'Maximum Fidelity pipeline plus aggressive compact micro-patch removal; elongated thin details remain protected; no grouping or node reduction.',
-      options: ['title', 'duration', 'fps', 'groupingMode', 'detectPrimitives', 'patchAreaPercent', 'protectThinPercent']
     }
   ],
   controls: {
@@ -31,8 +24,14 @@ const catalog = {
     primitiveFallback: 'path',
     fps: { min: 1, max: 240, default: 30 },
     durationMs: { min: 100, max: 600000, default: 1000 },
-    smallPatchCleanup: { patchAreaPercent: 0.01, protectThinPercent: 2.0, thinAspectRatio: 6 },
-    colorGroups: { geometryMerged: false, preservesInternalShapes: true, zOrderAudit: 'overlap-aware', alightImportSafe: true },
+    colorGroups: {
+      engine: 'smart-color-groups',
+      strategy: 'strict-one-color',
+      geometryMerged: false,
+      preservesInternalShapes: true,
+      zOrderAudit: 'topology-aware',
+      alightImportSafe: true
+    },
     compatibility: {
       contract: 'alight-xml-compatibility-v1',
       profile: 'alight-5.0.273-android-ff106',
