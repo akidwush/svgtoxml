@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -28,3 +30,11 @@ jobs:
       - run: npm test
       - run: npm run benchmark:color-groups
       - run: npm run benchmark:color-groups-overlap
+      - name: Verify diff whitespace
+        run: git diff --check "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
+      - name: Verify no conflict markers
+        run: |
+          if git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- .; then
+            echo 'Conflict marker found.' >&2
+            exit 1
+          fi
