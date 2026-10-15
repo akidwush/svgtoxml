@@ -1,9 +1,10 @@
-# SVG → Alight Motion XML v3.0.0
+# SVG → Alight Motion XML v3.0.1
 
-Converter SVG ke XML Alight Motion dengan dua engine aktif:
+Converter SVG ke XML Alight Motion dengan tiga engine aktif:
 
 1. **Maximum Fidelity** — mempertahankan source order, path, native stroke, gradient, clipPath, transform, dan hierarchy sejauh schema Alight Motion yang tervalidasi mendukungnya.
 2. **Smart Color Groups** — menargetkan satu effective solid color yang aman sebagai satu layer, tanpa menggabungkan geometri source path.
+3. **Small Patch Cleanup** — memakai pipeline Maximum Fidelity lalu menghapus patch/island kecil, sambil melindungi detail panjang-tipis. Mode ini tetap terpisah dari Smart Color Groups.
 
 Semua output melewati compatibility validator secara fail-closed sebelum dikembalikan.
 
@@ -90,19 +91,38 @@ Smart Color Groups:
 
 Engine yang tidak dikenal menghasilkan `ENGINE_NOT_SUPPORTED`; tidak ada fallback diam-diam.
 
-## Migration v3
+### Small Patch Cleanup (dipulihkan di v3.0.1)
 
-Small Patch Cleanup telah dihapus. Alias berikut tidak lagi didukung:
+Ketiga alias kembali didukung tanpa migrasi:
 
 - `patch-clean`
 - `small-patch`
 - `small-patch-cleanup`
 
-Request lama harus dimigrasikan secara eksplisit ke Maximum Fidelity atau Smart Color Groups sesuai kebutuhan; server tidak otomatis memilih engine lain.
+```json
+{
+  "svg": "<svg>...</svg>",
+  "options": {
+    "quality": "small-patch-cleanup",
+    "patchAreaPercent": 0.01,
+    "protectThinPercent": 2.0
+  }
+}
+```
+
+GET juga menerima `engine=small-patch-cleanup`, `patchAreaPercent`, dan `protectThinPercent`.
+
+- `patchAreaPercent`: persentase luas scene; default `0.01`, rentang `0–0.25`. Nilai `0` menonaktifkan penghapusan. Alias opsi legacy `microDetailPercent` tetap diterima melalui POST.
+- `protectThinPercent`: panjang minimum detail relatif terhadap sisi scene terpanjang; default `2`, rentang `0–100`. Rasio panjang:pendek minimal `6` agar detail dilindungi.
+- Ukuran patch dihitung dari bounding box tiap subpath dalam koordinat scene, sesuai perilaku engine sebelumnya, bukan luas area terisi yang eksak.
+- Urutan sumber, native stroke, gradient, clipPath, hierarchy, dan group opacity tetap memakai pipeline fidelity yang sama. Tidak ada grouping warna atau node simplification.
+- `cleanup` memuat `removedSubpaths`, `removedShapes`, `removedNodes`, dan ambang yang digunakan. Penghapusan disengaja tercatat sebagai fidelity loss `small-patch-cleanup`.
+
+Pemulihan ini tidak mengganti Smart Color Groups atau mengaktifkan cleanup pada engine lain. Nama engine asing tetap ditolak dengan `ENGINE_NOT_SUPPORTED`.
 
 ## Control Surface
 
-Maximum Fidelity menerima:
+Maximum Fidelity dan Small Patch Cleanup menerima `title`, `duration`, `fps`, `groupingMode`, dan `detectPrimitives`. Kontrol lengkap Maximum Fidelity:
 
 - `duration` (ms)
 - `fps`

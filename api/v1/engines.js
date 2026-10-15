@@ -1,6 +1,6 @@
 const catalog = {
   ok: true,
-  version: '3.0.0',
+  version: '3.0.1',
   engines: [
     {
       id: 'maximum-fidelity',
@@ -15,6 +15,13 @@ const catalog = {
       aliases: ['color-group', 'group-by-color', 'color-fidelity'],
       description: 'Scene-aware effective-paint grouping with topology checks, z-order conflict detection, safe fallback layers, and unmerged source geometry.',
       options: ['title', 'duration', 'fps']
+    },
+    {
+      id: 'small-patch-cleanup',
+      quality: 'patch-clean',
+      aliases: ['patch-clean', 'small-patch'],
+      description: 'Maximum Fidelity pipeline plus aggressive compact micro-patch removal; elongated thin details remain protected; no grouping or node reduction.',
+      options: ['title', 'duration', 'fps', 'groupingMode', 'detectPrimitives', 'patchAreaPercent', 'protectThinPercent']
     }
   ],
   controls: {
@@ -24,6 +31,7 @@ const catalog = {
     primitiveFallback: 'path',
     fps: { min: 1, max: 240, default: 30 },
     durationMs: { min: 100, max: 600000, default: 1000 },
+    smallPatchCleanup: { patchAreaPercent: 0.01, protectThinPercent: 2.0, thinAspectRatio: 6 },
     colorGroups: {
       engine: 'smart-color-groups',
       strategy: 'strict-one-color',

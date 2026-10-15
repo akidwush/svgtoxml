@@ -1,9 +1,9 @@
 {
   "name": "svg2xml-alight",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "private": true,
   "type": "module",
-  "description": "SVG to Alight Motion XML converter with Maximum Fidelity and scene-aware Smart Color Groups engines plus reusable GET/POST API.",
+  "description": "SVG to Alight Motion XML converter with Maximum Fidelity, scene-aware Smart Color Groups and Small Patch Cleanup engines plus reusable GET/POST API.",
   "scripts": {
     "test": "node --test",
     "benchmark:color-groups": "node scripts/benchmark-color-groups.mjs",

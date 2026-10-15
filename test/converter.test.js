@@ -19,7 +19,7 @@ test('Maximum Fidelity preserves source order, native stroke and exact geometry'
 
 test('unknown and removed engine names fail clearly', () => {
   const svg = '<svg width="10" height="10"><rect width="10" height="10" fill="red"/></svg>';
-  for (const quality of ['optimized', 'patch-clean', 'small-patch', 'small-patch-cleanup']) {
+  for (const quality of ['optimized', 'accurate', 'balanced', 'lightweight', 'unknown-engine']) {
     assert.throws(
       () => convertSvgToAlightXml(svg, { quality }),
       (error) => error?.code === 'ENGINE_NOT_SUPPORTED' && error?.engine === quality
@@ -49,7 +49,7 @@ test('Color Groups converts 100 flat-color shapes with 10 colors into 10 layers'
   assert.equal(out.grouping.geometryMerged, false);
   assert.equal(out.grouping.preservesInternalShapes, true);
   assert.equal(out.stats.outputShapes, 10);
-  assert.equal(out.profile.version, '3.0.0');
+  assert.equal(out.profile.version, '3.0.1');
   assert.equal(out.profile.alightImportSafe, true);
   assert.equal((out.xml.match(/label="Color \d{2} - #[0-9a-f]{6}"/gi) || []).length, 10);
   assert.equal((out.xml.match(/<shape\b/g) || []).length, 100);
@@ -310,7 +310,7 @@ test('every converter mode returns only compatibility-validated XML', () => {
     </g>
   </svg>`;
 
-  for (const quality of ['maximum-fidelity', 'color-groups']) {
+  for (const quality of ['maximum-fidelity', 'color-groups', 'small-patch-cleanup']) {
     const out = convertSvgToAlightXml(svg, { quality, duration: 1800, fps: 60 });
     assert.equal(out.profile.alightImportSafe, true, `${quality} must be gated`);
     assert.equal(out.validation.compatibility.ok, true, `${quality} must expose validation result`);
