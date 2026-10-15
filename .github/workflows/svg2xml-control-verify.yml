@@ -8,6 +8,7 @@ on:
       - 'index.html'
       - 'style.css'
       - 'test/**'
+      - 'scripts/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/svg2xml-control-verify.yml'
@@ -25,3 +26,5 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run check
       - run: npm test
+      - run: npm run benchmark:color-groups
+      - run: node scripts/benchmark-color-groups-overlap.mjs
