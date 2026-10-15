@@ -46,7 +46,7 @@ test('optimized classifier preserves touching, overlap, containment and hole sem
   const squareA = 'M0 0H50V50H0Z';
   const touching = 'M50 0H100V50H50Z';
   const crossing = 'M25 25H75V75H25Z';
-  const inside = 'M10 10H20V20H10Z';
+  const inside = 'M1 1H2V2H1Z';
   const donut = 'M0 0H100V100H0Z M30 30H70V70H30Z';
   const inHole = 'M40 40H60V60H40Z';
 
