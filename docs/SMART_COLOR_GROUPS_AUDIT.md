@@ -1,5 +1,7 @@
 # Smart Color Groups audit
 
+> Historical audit for v3.0.0. The Small Patch Cleanup removal plan below is superseded by v3.0.1: all cleanup behavior and interfaces are restored alongside Smart Color Groups. See `PATCH_CLEANUP_RESTORATION.md`.
+
 ## Current architecture
 
 `lib/converter.js` owns DOM parsing, CSS cascade, inherited style resolution, transform normalization, paint extraction, candidate creation, serialization, and engine dispatch. `lib/path-geometry.js` provides the shared canonical path pipeline. `lib/alight-compatibility.js` parses and validates every generated XML document before it is returned.

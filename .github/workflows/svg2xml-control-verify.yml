@@ -2,8 +2,11 @@ name: SVG2XML Control Surface Verify
 on:
   pull_request:
     paths:
-      - 'lib/converter.js'
-      - 'api/v1/engines.js'
+      - 'lib/**'
+      - 'api/**'
+      - 'app.js'
+      - 'index.html'
+      - 'style.css'
       - 'test/**'
       - 'package.json'
       - 'package-lock.json'

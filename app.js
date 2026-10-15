@@ -32,9 +32,15 @@ function normalizedProjectName(value, fallback = 'Alight Motion Project') {
 }
 
 function applyPreset(name) {
+  const patchMode = name === 'patch-clean';
   const colorMode = name === 'color-group';
-  $('losslessNote').classList.toggle('hidden', colorMode);
+  $('patchAreaPercent').value = 0.01;
+  $('protectThinPercent').value = 2.0;
+  $('patchAreaPercent').disabled = !patchMode;
+  $('protectThinPercent').disabled = !patchMode;
+  $('losslessNote').classList.toggle('hidden', patchMode || colorMode);
   $('colorGroupNote').classList.toggle('hidden', !colorMode);
+  $('patchNote').classList.toggle('hidden', !patchMode);
 }
 
 quality.addEventListener('change', () => applyPreset(quality.value));
@@ -150,6 +156,8 @@ convertBtn.addEventListener('click', async () => {
         options: {
           title: normalizedProjectName(projectName.value, lastBaseName),
           quality: quality.value,
+          patchAreaPercent: Number($('patchAreaPercent').value),
+          protectThinPercent: Number($('protectThinPercent').value),
           validateBounds: quality.value === 'lossless',
           requireExact: quality.value === 'lossless'
         }
@@ -172,11 +180,19 @@ convertBtn.addEventListener('click', async () => {
     lastXml = data.xml;
     xmlOutput.value = data.xml;
 
+    const patchMode = data.profile?.quality === 'patch-clean';
     const colorMode = data.profile?.quality === 'color-group';
     const fidelityExact = data.fidelity?.exact === true;
     const fidelityLosses = data.fidelity?.losses?.length || 0;
 
-    statsEl.innerHTML = colorMode ? [
+    statsEl.innerHTML = patchMode ? [
+      stat('Shape output', data.stats.outputShapes ?? 0),
+      stat('Patch/subpath dibuang', data.cleanup?.removedSubpaths ?? 0),
+      stat('Shape mikro dibuang', data.cleanup?.removedShapes ?? 0),
+      stat('Node', `${data.stats.nodesBefore ?? 0} → ${data.stats.nodesAfter ?? 0}`),
+      stat('Stroke native', data.stats.strokes ?? 0),
+      stat('Ukuran XML', `${((data.stats.outputBytes || 0) / 1024).toFixed(1)} KB`)
+    ].join('') : colorMode ? [
       stat('Shape sumber', data.grouping?.inputShapes ?? 0),
       stat('Warna digrup', data.grouping?.groupedColors ?? 0),
       stat('Layer output', data.grouping?.outputLayers ?? data.stats.outputShapes ?? 0),
@@ -195,7 +211,7 @@ convertBtn.addEventListener('click', async () => {
       stat('Ukuran XML', `${((data.stats.outputBytes || 0) / 1024).toFixed(1)} KB`)
     ].join('');
 
-    const fidelityMessage = [fidelityExact
+    const fidelityMessage = patchMode ? [] : [fidelityExact
       ? '✓ Audit fidelity: tidak ada kehilangan fitur yang diketahui.'
       : `⚠ Audit fidelity menemukan ${fidelityLosses} jenis perbedaan.`];
 
@@ -203,13 +219,17 @@ convertBtn.addEventListener('click', async () => {
       .map(escapeHtml)
       .join('<br>');
 
-    $('resultTitle').textContent = colorMode
+    $('resultTitle').textContent = patchMode
+      ? `${data.width}×${data.height} · ${data.stats.outputShapes} shape · Small Patch Cleanup`
+      : colorMode
         ? `${data.width}×${data.height} · ${data.grouping?.groupedColors || 0} warna · Color Groups`
         : `${data.width}×${data.height} · ${data.stats.outputShapes} shape · Maximum Fidelity`;
 
     resultCard.classList.remove('hidden');
 
-    if (colorMode) {
+    if (patchMode) {
+      status.textContent = `Selesai · ${data.cleanup?.removedSubpaths || 0} subpath kecil + ${data.cleanup?.removedShapes || 0} shape mikro dibuang · z-order/stroke tetap dipertahankan.`;
+    } else if (colorMode) {
       const exact = data.grouping?.groupingExact ? 'exact' : 'konflik terdeteksi';
       status.textContent = `Selesai · ${data.grouping?.inputShapes || 0} shape → ${data.grouping?.outputLayers || 0} layer · ${data.grouping?.groupedColors || 0} warna · ${exact}.`;
     } else {

@@ -1,5 +1,7 @@
 # Smart Color Groups implementation report
 
+> Historical report for v3.0.0, not the current engine catalog. v3.0.1 restores Small Patch Cleanup and all three aliases alongside Smart Color Groups; the removal and two-engine migration below no longer apply. See `PATCH_CLEANUP_RESTORATION.md`.
+
 ## Audit findings
 
 The previous engine already shared DOM, computed-style, transform, geometry, serializer, and compatibility code with Maximum Fidelity. It canonicalized effective color values, isolated complex paint, and kept source paths separate. Its principal correctness gap was treating every positive-area bounding-box intersection as painted overlap. Eligibility also returned only a color or `null`, which made fallback decisions opaque.

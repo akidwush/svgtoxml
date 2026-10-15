@@ -10,9 +10,9 @@
 <body>
   <main class="shell">
     <header>
-      <p class="eyebrow">SVG → XML · ENGINE v3.0.0</p>
+      <p class="eyebrow">SVG → XML · ENGINE v3.0.1</p>
       <h1>Alight Motion Converter</h1>
-      <p class="sub">Dua engine: Maximum Fidelity untuk preservasi source dan Smart Color Groups untuk satu warna solid aman menjadi satu layer dengan audit paint, geometri, dan z-order.</p>
+      <p class="sub">Tiga engine: Maximum Fidelity untuk preservasi source, Smart Color Groups untuk satu warna solid aman menjadi satu layer, dan Small Patch Cleanup untuk menghapus patch/island SVG kecil.</p>
     </header>
 
     <section class="card">
@@ -29,6 +29,7 @@
           <select id="quality">
             <option value="lossless" selected>Maximum Fidelity — strict</option>
             <option value="color-group">Smart Color Groups — 1 warna = 1 layer</option>
+            <option value="patch-clean">Small Patch Cleanup — hapus patch kecil saja</option>
           </select>
         </label>
         <label>
@@ -38,9 +39,20 @@
       </div>
 
       <details class="advanced">
-        <summary>Informasi engine</summary>
+        <summary>Informasi engine &amp; pengaturan Small Patch Cleanup</summary>
+        <div class="grid">
+          <label>
+            <span>Ambang patch kecil (%)</span>
+            <input id="patchAreaPercent" type="number" min="0" max="0.25" step="0.0001" value="0.01" />
+          </label>
+          <label>
+            <span>Lindungi detail panjang (%)</span>
+            <input id="protectThinPercent" type="number" min="0" max="100" step="0.1" value="2.0" />
+          </label>
+        </div>
         <p id="losslessNote" class="mini">Maximum Fidelity: z-order asli, native stroke, gradient, clipPath, group opacity, presisi 8, tanpa grouping dan tanpa node reduction. Output ditolak jika strict audit menemukan loss yang diketahui.</p>
         <p id="colorGroupNote" class="mini hidden">Smart Color Groups memakai effective paint, actual path topology, dan graph z-order. Gradient, stroke, transparency, clip, mask, filter, dan compositing kompleks tetap menjadi fallback terpisah. Source path tidak digabung.</p>
+        <p id="patchNote" class="mini hidden">Small Patch Cleanup memakai pipeline Maximum Fidelity yang sama dengan ambang default lebih agresif. Patch compact kecil dibuang lebih cepat, sementara detail yang benar-benar panjang dan tipis tetap dilindungi.</p>
       </details>
 
       <button id="convertBtn" type="button">Konversi ke XML</button>
@@ -73,6 +85,6 @@
       <p class="mini">Disarankan untuk SVG besar. Body: <code>{ "svg": "&lt;svg...&gt;", "options": { "quality": "maximum-fidelity" } }</code></p>
     </section>
   </main>
-  <script type="module" src="/app.js?v=3.0.0"></script>
+  <script type="module" src="/app.js?v=3.0.1"></script>
 </body>
 </html>
