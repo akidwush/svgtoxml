@@ -15,7 +15,7 @@ function round(value) {
   return Number(value.toFixed(3));
 }
 
-function denseCirclePath(cx, cy, radius, points = 64) {
+function denseCirclePath(cx, cy, radius, points = 80) {
   const coords = [];
   for (let i = 0; i < points; i++) {
     const angle = (Math.PI * 2 * i) / points;
@@ -42,8 +42,8 @@ function cubicLoopPath(cx, cy, radius) {
 }
 
 function donutPath(cx, cy, radius) {
-  const outer = denseCirclePath(cx, cy, radius, 64);
-  const inner = denseCirclePath(cx, cy, radius * 0.42, 32);
+  const outer = denseCirclePath(cx, cy, radius, 80);
+  const inner = denseCirclePath(cx, cy, radius * 0.42, 40);
   return `${outer} ${inner}`;
 }
 
@@ -64,13 +64,13 @@ function fixture(count = SHAPE_COUNT) {
     if (index % 29 === 0) {
       d = donutPath(cx, cy, radius);
       fillRule = ' fill-rule="evenodd"';
-      sourcePathNodes += 98;
+      sourcePathNodes += 124;
     } else if (index % 17 === 0) {
       d = cubicLoopPath(cx, cy, radius);
       sourcePathNodes += 6;
     } else {
-      d = denseCirclePath(cx, cy, radius, 64);
-      sourcePathNodes += 66;
+      d = denseCirclePath(cx, cy, radius, 80);
+      sourcePathNodes += 82;
     }
     shapes.push(`<path id="dense-${index}" fill="${color}"${fillRule} d="${d}"/>`);
   }
