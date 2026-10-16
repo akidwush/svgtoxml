@@ -1,19 +1,32 @@
 import assert from 'node:assert/strict';
 import { performance } from 'node:perf_hooks';
-import { convertSvgToAlightXml as convertSvgToAlightXmlCore } from '../lib/converter-core.js';
 import { convertSvgToAlightXml } from '../lib/converter.js';
-import {
-  getFilledPathGeometryScopeStats,
-  withFilledPathGeometryScope
-} from '../lib/path-geometry.js';
 
 const SHAPE_COUNT = 987;
-const PROFILE_WORK_LIMIT = 120_000_000;
+const TARGET_MS = 8000;
 const colors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#06b6d4', '#f97316'];
 
-function round(value) {
-  return Number(value.toFixed(3));
-}
+// Captured on GitHub Actions before this repair from the same synthetic fixture.
+// These values are a forensic reference only; do not treat cross-run timings as
+// an apples-to-apples speedup claim.
+const BEFORE_REFERENCE = Object.freeze({
+  inputBytes: 1219087,
+  inputShapes: 987,
+  pathCount: 987,
+  sourcePathNodes: 78148,
+  overlapCandidates: 10027,
+  geometryChecks: 10027,
+  preparedGeometries: 987,
+  geometryCacheHits: 19067,
+  segmentBoundsTests: 22242968,
+  segmentBoundsRejected: 22230869,
+  segmentComparisons: 12099,
+  paintPointTests: 221696,
+  geometryWorkUnits: 22464664,
+  totalMs: 1603.198,
+  planningMs: 1243.083,
+  productionGuard: 'COLOR_GROUP_COMPLEXITY_LIMIT@20000001'
+});
 
 function denseCirclePath(cx, cy, radius, points = 80) {
   const coords = [];
@@ -42,9 +55,7 @@ function cubicLoopPath(cx, cy, radius) {
 }
 
 function donutPath(cx, cy, radius) {
-  const outer = denseCirclePath(cx, cy, radius, 80);
-  const inner = denseCirclePath(cx, cy, radius * 0.42, 40);
-  return `${outer} ${inner}`;
+  return `${denseCirclePath(cx, cy, radius, 80)} ${denseCirclePath(cx, cy, radius * 0.42, 40)}`;
 }
 
 function fixture(count = SHAPE_COUNT) {
@@ -80,47 +91,77 @@ function fixture(count = SHAPE_COUNT) {
   };
 }
 
-const input = fixture();
-const inputBytes = Buffer.byteLength(input.svg, 'utf8');
-const profileStarted = performance.now();
-const profiled = withFilledPathGeometryScope(() => {
-  const output = convertSvgToAlightXmlCore(input.svg, { quality: 'color-groups', includeTimings: true });
-  return { output, geometry: getFilledPathGeometryScopeStats() };
-}, { maxWorkUnits: PROFILE_WORK_LIMIT });
-const profileMs = performance.now() - profileStarted;
-
-const before = {
-  fixture: 'synthetic-real-complex-v1',
-  inputBytes,
-  inputShapes: profiled.output.grouping.inputShapes,
-  pathCount: SHAPE_COUNT,
-  sourcePathNodes: input.sourcePathNodes,
-  overlapCandidates: profiled.output.grouping.overlapCandidates,
-  geometryChecks: profiled.output.grouping.geometryChecks,
-  preparedGeometries: profiled.geometry.preparedGeometries,
-  geometryCacheHits: profiled.geometry.geometryCacheHits,
-  segmentBoundsTests: profiled.geometry.segmentBoundsTests,
-  segmentBoundsRejected: profiled.geometry.segmentBoundsRejected,
-  segmentComparisons: profiled.geometry.segmentComparisons,
-  paintPointTests: profiled.geometry.paintPointTests,
-  geometryWorkUnits: profiled.geometry.workUnits,
-  geometryWorkLimit: profiled.geometry.maxWorkUnits,
-  totalMs: round(profileMs),
-  planningMs: profiled.output.grouping.timingsMs?.planning
-};
-console.log('REAL_COMPLEX_BASELINE', JSON.stringify(before));
-
-let productionFailure = null;
-try {
-  convertSvgToAlightXml(input.svg, { quality: 'color-groups', includeTimings: true });
-} catch (error) {
-  productionFailure = error;
+function stableAudit(grouping) {
+  return {
+    inputShapes: grouping.inputShapes,
+    overlapCandidates: grouping.overlapCandidates,
+    geometryChecks: grouping.geometryChecks,
+    preparedGeometries: grouping.preparedGeometries,
+    preparedSegments: grouping.preparedSegments,
+    geometryCacheHits: grouping.geometryCacheHits,
+    spatialNodeTests: grouping.spatialNodeTests,
+    spatialNodeRejected: grouping.spatialNodeRejected,
+    segmentBoundsTests: grouping.segmentBoundsTests,
+    segmentBoundsRejected: grouping.segmentBoundsRejected,
+    segmentComparisons: grouping.segmentComparisons,
+    paintPointTests: grouping.paintPointTests,
+    geometryWorkUnits: grouping.geometryWorkUnits,
+    geometryWorkLimit: grouping.geometryWorkLimit,
+    actualOverlaps: grouping.actualOverlaps,
+    touchingPairs: grouping.touchingPairs,
+    unknownPairs: grouping.unknownPairs,
+    zOrderConstraints: grouping.zOrderConstraints
+  };
 }
 
-assert.equal(productionFailure?.code, 'COLOR_GROUP_COMPLEXITY_LIMIT', 'baseline fixture must reproduce the production complexity guard before the algorithm repair');
-console.log('REAL_COMPLEX_PRODUCTION_GUARD', JSON.stringify({
-  code: productionFailure.code,
-  geometryWork: productionFailure.geometryWork
-}));
+function run(svg) {
+  const started = performance.now();
+  const output = convertSvgToAlightXml(svg, { quality: 'color-groups', includeTimings: true });
+  return { output, totalMs: performance.now() - started };
+}
 
-throw new Error('BASELINE_PROFILE_ONLY: expected pre-repair Smart Color Groups complexity failure captured.');
+const input = fixture();
+const inputBytes = Buffer.byteLength(input.svg, 'utf8');
+assert.equal(inputBytes, BEFORE_REFERENCE.inputBytes, 'fixture bytes drifted from captured baseline');
+assert.equal(input.sourcePathNodes, BEFORE_REFERENCE.sourcePathNodes, 'fixture topology drifted from captured baseline');
+
+const first = run(input.svg);
+const second = run(input.svg);
+const audit = stableAudit(first.output.grouping);
+
+assert.equal(first.output.profile.engine, 'smart-color-groups');
+assert.equal(first.output.grouping.geometryMerged, false);
+assert.equal(first.output.grouping.preservesInternalShapes, true);
+assert.equal(first.output.grouping.inputShapes, SHAPE_COUNT);
+assert.ok(first.output.grouping.spatialNodeTests > 0);
+assert.ok(first.output.grouping.spatialNodeRejected > 0);
+assert.ok(first.output.grouping.geometryWorkUnits < first.output.grouping.geometryWorkLimit);
+assert.ok(first.output.grouping.segmentBoundsTests < BEFORE_REFERENCE.segmentBoundsTests / 4,
+  'segment-pair broad phase did not reduce enough versus captured Cartesian baseline');
+assert.deepEqual(audit, stableAudit(second.output.grouping), 'real-complex topology audit must remain deterministic');
+assert.ok(first.totalMs < TARGET_MS, `real-complex benchmark exceeded ${TARGET_MS} ms: ${first.totalMs.toFixed(3)} ms`);
+assert.ok(second.totalMs < TARGET_MS, `second real-complex benchmark exceeded ${TARGET_MS} ms: ${second.totalMs.toFixed(3)} ms`);
+
+console.log('REAL_COMPLEX_BEFORE_REFERENCE', JSON.stringify(BEFORE_REFERENCE));
+console.table([{
+  fixture: 'synthetic-real-complex-v1',
+  inputBytes,
+  inputShapes: audit.inputShapes,
+  pathCount: SHAPE_COUNT,
+  sourcePathNodes: input.sourcePathNodes,
+  totalMs: Number(first.totalMs.toFixed(3)),
+  planningMs: first.output.grouping.timingsMs?.planning,
+  overlapCandidates: audit.overlapCandidates,
+  geometryChecks: audit.geometryChecks,
+  preparedGeometries: audit.preparedGeometries,
+  preparedSegments: audit.preparedSegments,
+  geometryCacheHits: audit.geometryCacheHits,
+  spatialNodeTests: audit.spatialNodeTests,
+  spatialNodeRejected: audit.spatialNodeRejected,
+  segmentBoundsTests: audit.segmentBoundsTests,
+  segmentBoundsRejected: audit.segmentBoundsRejected,
+  segmentComparisons: audit.segmentComparisons,
+  paintPointTests: audit.paintPointTests,
+  geometryWorkUnits: audit.geometryWorkUnits,
+  geometryWorkLimit: audit.geometryWorkLimit
+}]);
