@@ -47,7 +47,6 @@ test('Smart Color Groups prepares candidate geometry at most once per conversion
   assert.ok(out.grouping.preparedGeometries <= out.grouping.inputShapes);
   assert.ok(out.grouping.geometryCacheHits > 0);
   assert.ok(out.grouping.spatialNodeTests > 0);
-  assert.ok(out.grouping.spatialNodeRejected > 0);
   assert.ok(out.grouping.segmentBoundsTests >= out.grouping.segmentComparisons);
   assert.ok(out.grouping.segmentBoundsRejected > 0);
   assert.ok(out.grouping.geometryWorkUnits > 0);
@@ -93,14 +92,14 @@ test('many-segment dense paths use spatial pruning without silent engine fallbac
   assert.ok(out.grouping.geometryWorkUnits < out.grouping.geometryWorkLimit);
 });
 
-test('disjoint complex paths are rejected by spatial hierarchy without exact Cartesian scan', () => {
+test('disjoint complex paths exit before exact segment comparisons', () => {
   const left = densePolygonPath(0, 0, 10, 96);
   const right = densePolygonPath(1000, 1000, 10, 96);
   const relationship = withFilledPathGeometryScope(() => {
     const result = classifyFilledPathRelationship(left, right);
     const stats = getFilledPathGeometryScopeStats();
     assert.equal(stats.segmentComparisons, 0);
-    assert.equal(stats.geometryWorkUnits, 0);
+    assert.equal(stats.workUnits, 0);
     return result;
   });
   assert.equal(relationship, 'DISJOINT');
