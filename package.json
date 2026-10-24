@@ -1,6 +1,6 @@
 {
   "name": "svg2xml-alight",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "private": true,
   "type": "module",
   "description": "SVG to Alight Motion XML converter with Maximum Fidelity, scene-aware Smart Color Groups and Small Patch Cleanup engines plus reusable GET/POST API.",
@@ -9,16 +9,21 @@
     "benchmark:color-groups": "node scripts/benchmark-color-groups.mjs",
     "benchmark:color-groups-overlap": "node scripts/benchmark-color-groups-overlap.mjs",
     "benchmark:color-groups-real-complex": "node scripts/benchmark-color-groups-real-complex.mjs",
-    "check": "node --check api/convert.js && node --check api/health.js && node --check api/v1/convert.js && node --check api/v1/health.js && node --check api/v1/auth.js && node --check api/v1/engines.js && node --check lib/api-auth.js && node --check lib/api-http.js && node --check lib/alight-compatibility.js && node --check lib/path-geometry-core.js && node --check lib/path-geometry.js && node --check lib/converter-core.js && node --check lib/converter.js && node --check scripts/benchmark-color-groups-overlap.mjs && node --check scripts/benchmark-color-groups-real-complex.mjs && node --check app.js"
+    "check": "node --check api/convert.js && node --check api/health.js && node --check api/v1/convert.js && node --check api/v1/health.js && node --check api/v1/auth.js && node --check api/v1/engines.js && node --check lib/api-auth.js && node --check lib/api-http.js && node --check lib/alight-compatibility.js && node --check lib/path-geometry-core.js && node --check lib/path-geometry.js && node --check lib/converter-core.js && node --check lib/converter.js && node --check scripts/benchmark-color-groups-overlap.mjs && node --check scripts/benchmark-color-groups-real-complex.mjs && node --check app.js && node --check lib/svg-paint.js && node --check scripts/verify-svg-paint.mjs",
+    "verify:paint": "node scripts/verify-svg-paint.mjs"
   },
   "dependencies": {
     "@xmldom/xmldom": "0.9.12",
     "cheerio": "1.2.0",
-    "color-name": "2.1.1",
+    "css-tree": "3.2.1",
+    "culori": "4.0.2",
     "svg-path-bounds": "1.0.2",
     "svgpath": "2.6.0"
   },
   "engines": {
     "node": ">=20.18.1"
+  },
+  "devDependencies": {
+    "playwright": "1.55.1"
   }
 }

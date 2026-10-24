@@ -28,7 +28,7 @@ test('health advertises active v3 engines and GET/POST API', async () => {
   const response = await healthHandler.fetch(new Request('https://example.test/api/health'));
   assert.equal(response.status, 200);
   const body = await response.json();
-  assert.equal(body.version, '3.0.1');
+  assert.equal(body.version, '3.1.0');
   assert.deepEqual(body.engines, ['maximum-fidelity', 'color-groups', 'small-patch-cleanup']);
   assert.deepEqual(body.externalApiMethods, ['GET', 'POST']);
 });
@@ -41,7 +41,7 @@ test('engine catalog is public and CORS-ready', async () => {
   assert.equal(response.headers.get('access-control-allow-origin'), '*');
   const body = await response.json();
   assert.equal(body.ok, true);
-  assert.equal(body.version, '3.0.1');
+  assert.equal(body.version, '3.1.0');
   assert.deepEqual(body.engines.map((engine) => engine.id), ['maximum-fidelity', 'color-groups', 'small-patch-cleanup']);
   const patchEngine = body.engines.find((engine) => engine.id === 'small-patch-cleanup');
   assert.equal(patchEngine.quality, 'patch-clean');
@@ -53,6 +53,9 @@ test('engine catalog is public and CORS-ready', async () => {
   assert.equal(body.controls.colorGroups.alightImportSafe, true);
   assert.equal(body.controls.compatibility.allEnginesValidated, true);
   assert.equal(body.controls.compatibility.failClosed, true);
+  assert.equal(body.controls.paint.outputColorSpace, 'srgb');
+  assert.equal(body.controls.paint.channelBits, 8);
+  assert.equal(body.controls.paint.unknownPaint, 'fidelity-loss');
 });
 
 test('public website endpoint remains same-origin POST only', async () => {
@@ -160,7 +163,7 @@ test('external GET supports Color Groups engine', async () => {
     const body = await response.json();
     assert.equal(body.profile.quality, 'color-group');
     assert.equal(body.profile.engine, 'smart-color-groups');
-    assert.equal(body.profile.version, '3.0.1');
+    assert.equal(body.profile.version, '3.1.0');
     assert.equal(body.profile.alightImportSafe, true);
     assert.equal(body.grouping.groupedColors, 1);
     assert.equal(body.grouping.outputLayers, 1);
