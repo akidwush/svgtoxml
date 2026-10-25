@@ -28,6 +28,13 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run check
       - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify:paint
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: svg-paint-comparison
+          path: artifacts/svg-paint/
       - run: npm run benchmark:color-groups
       - run: npm run benchmark:color-groups-overlap
       - run: npm run benchmark:color-groups-real-complex

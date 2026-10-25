@@ -1,6 +1,6 @@
 const catalog = {
   ok: true,
-  version: '3.0.1',
+  version: '3.1.0',
   engines: [
     {
       id: 'maximum-fidelity',
@@ -25,6 +25,15 @@ const catalog = {
     }
   ],
   controls: {
+    paint: {
+      colors: ['hex', 'named', 'rgb', 'hsl', 'hwb', 'lab', 'lch', 'oklab', 'oklch', 'color()'],
+      outputColorSpace: 'srgb',
+      channelBits: 8,
+      customProperties: true,
+      staticCssOnly: true,
+      unknownPaint: 'fidelity-loss',
+      outOfGamut: 'fidelity-loss'
+    },
     groupingMode: ['nested', 'flat'],
     detectPrimitives: true,
     primitiveTypes: ['rect', 'circle', 'ellipse'],

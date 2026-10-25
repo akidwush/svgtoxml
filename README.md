@@ -1,4 +1,4 @@
-# SVG → Alight Motion XML v3.0.1
+# SVG → Alight Motion XML v3.1.0
 
 Converter SVG ke XML Alight Motion dengan tiga engine aktif:
 
@@ -7,6 +7,28 @@ Converter SVG ke XML Alight Motion dengan tiga engine aktif:
 3. **Small Patch Cleanup** — memakai pipeline Maximum Fidelity lalu menghapus patch/island kecil, sambil melindungi detail panjang-tipis. Mode ini tetap terpisah dari Smart Color Groups.
 
 Semua output melewati compatibility validator secara fail-closed sebelum dikembalikan.
+
+## Perbaikan warna v3.1
+
+Parser paint bersama kini memakai Culori dan CSS Tree pada server. Warna legacy
+(hex, nama SVG, RGB/RGBA dan HSL/HSLA, termasuk huruf besar) serta warna CSS modern
+(`hwb`, `lab`, `lch`, `oklab`, `oklch`, dan profil standar `color()`) dipetakan ke
+ARGB sRGB 8-bit yang digunakan XML Alight Motion. Variabel CSS mempertahankan huruf
+besar/kecil, fallback bertingkat, inheritance, `currentColor`, cascade `!important`,
+dan selector list di dalam `:is()`/`:where()`. Ketiga mode memakai parser yang sama.
+Warna stop gradient memakai konteks CSS stop/gradient, bukan warna shape pemakainya.
+Offset dua stop gradient linear dipertahankan. Child dengan visibility eksplisit
+tetap diproses meskipun container-nya tersembunyi.
+
+Ini bukan janji seluruh spesifikasi SVG/future SVG dapat dipetakan 100% ke XML.
+Warna di luar gamut sRGB, interpolasi gradient dengan color-space yang belum
+dipetakan, fungsi warna belum didukung, dan CSS dinamis/kondisional dicatat sebagai
+fidelity loss. `maximum-fidelity` dengan `requireExact: true` menolak hasil tersebut.
+Tidak ada penggantian warna diam-diam agar hasil terlihat sukses, raster fallback,
+atau penggabungan/pengurangan geometri baru. Batas multi-stop gradient, filter,
+mask, pattern, teks dan animasi yang ada tetap berlaku.
+
+Rincian, bukti dan batas pengujian: [SVG paint fidelity](docs/SVG_PAINT_FIDELITY.md).
 
 ## Engine
 
