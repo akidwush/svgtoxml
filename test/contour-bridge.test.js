@@ -12,8 +12,8 @@ test('two closed contours are joined by a retraced bridge without touching Bézi
     'M 2 2C 4 4, 5 4, 6 2L 2 2Z';
   const result = bridgeClosedContourPair(source);
   assert.equal(result.bridged, true);
-  assert.equal((result.path.match(/M\\s/g) || []).length, 1);
-  assert.equal((result.path.match(/C\\s/g) || []).length, 2);
+  assert.equal((result.path.match(/M\s/g) || []).length, 1);
+  assert.equal((result.path.match(/C\s/g) || []).length, 2);
   assert.match(result.path, /L 0 0L 2 2/);
   assert.match(result.path, /L 2 2L 0 0Z$/);
 });
@@ -38,7 +38,7 @@ test('Alight XML bridges the donut for Maximum Fidelity, Patch Cleanup and Color
     const $ = load(out.xml, { xmlMode: true });
     const path = $('shape[label="ring"] > path').attr('d');
     assert.ok(path, `${quality}: output ring missing`);
-    assert.equal((path.match(/M\\s/g) || []).length, 1, `${quality}: ring hole requires one bridged contour`);
+    assert.equal((path.match(/M\s/g) || []).length, 1, `${quality}: ring hole requires one bridged contour`);
     assert.equal(out.validation.compatibility.ok, true);
     assert.match(out.xml, /#ff2253e9/i);
   }
@@ -51,6 +51,6 @@ test('bridge is not applied to a stroked compound path', () => {
   const out = convertSvgToAlightXml(svg, { quality: 'maximum-fidelity' });
   const $ = load(out.xml, { xmlMode: true });
   const path = $('shape[label="stroked-ring"] > path').attr('d');
-  assert.equal((path.match(/M\\s/g) || []).length, 2);
+  assert.equal((path.match(/M\s/g) || []).length, 2);
   assert.equal($('path-stroke').length, 1);
 });
