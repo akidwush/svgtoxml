@@ -29,29 +29,32 @@ test('open and three-contour paths are left unchanged', () => {
   }
 });
 
-test('Alight XML bridges the donut for Maximum Fidelity, Patch Cleanup and Color Groups', () => {
+test('Alight XML uses native excluded contours for all three engines', () => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
     <path id="ring" fill="#2253e9" d="${ring}"/>
   </svg>`;
   for (const quality of ['maximum-fidelity', 'patch-clean', 'color-groups']) {
     const out = convertSvgToAlightXml(svg, { quality, patchAreaPercent: 0 });
     const $ = load(out.xml, { xmlMode: true });
-    const path = $('shape[label="ring"] > path').attr('d');
-    assert.ok(path, `${quality}: output ring missing`);
-    assert.equal((path.match(/M\s/g) || []).length, 1, `${quality}: ring hole requires one bridged contour`);
+    const contours = $('shape[label="ring"] > path > contour');
+    assert.equal(contours.length, 2, `${quality}: two native contours expected`);
+    assert.equal(contours.eq(0).attr('exclude'), undefined);
+    assert.equal(contours.eq(1).attr('exclude'), 'true');
+    assert.ok(contours.toArray().every(n => $(n).attr('d').startsWith('M ')));
     assert.equal(out.validation.compatibility.ok, true);
     assert.match(out.xml, /#ff2253e9/i);
   }
 });
 
-test('bridge is not applied to a stroked compound path', () => {
+test('stroked compound path keeps separate native contours and native stroke', () => {
   const svg = `<svg width="100" height="100">
     <path id="stroked-ring" fill="#2253e9" stroke="#000000" stroke-width="3" d="${ring}"/>
   </svg>`;
   const out = convertSvgToAlightXml(svg, { quality: 'maximum-fidelity' });
   const $ = load(out.xml, { xmlMode: true });
-  const path = $('shape[label="stroked-ring"] > path').attr('d');
-  assert.equal((path.match(/M\s/g) || []).length, 2);
+  const contours = $('shape[label="stroked-ring"] > path > contour');
+  assert.equal(contours.length, 2);
+  assert.equal(contours.eq(1).attr('exclude'), 'true');
   assert.equal($('path-stroke').length, 1);
 });
 
@@ -86,15 +89,16 @@ test('six subpaths with a single final Z become one contour, preserving all sect
   assert.equal(result.path.endsWith('Z'), true);
 });
 
-test('all engines bridge Vector Magic-style implicit ring holes; strokes stay untouched', () => {
+test('all engines preserve implicit-closed ring holes using native contour exclude', () => {
   const ringWithImplicitClose = 'M 10 10 L 90 10 L 90 90 L 10 90 ' +
     'M 30 30 L 30 70 L 70 70 L 70 30 Z';
   const svg = `<svg width="100" height="100"><path id="implicit-ring" fill="#2253e9" d="${ringWithImplicitClose}"/></svg>`;
   for (const quality of ['maximum-fidelity', 'patch-clean', 'color-groups']) {
     const out = convertSvgToAlightXml(svg, { quality, patchAreaPercent: 0 });
     const $ = load(out.xml, { xmlMode: true });
-    const path = $('shape[label="implicit-ring"] > path').attr('d');
-    assert.equal((path.match(/M\s/g) || []).length, 1, quality);
+    const contours = $('shape[label="implicit-ring"] > path > contour');
+    assert.equal(contours.length, 2, quality);
+    assert.equal(contours.eq(1).attr('exclude'), 'true', quality);
     assert.equal(out.validation.compatibility.ok, true, quality);
   }
 });

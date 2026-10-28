@@ -30,6 +30,40 @@ mask, pattern, teks dan animasi yang ada tetap berlaku.
 
 Rincian, bukti dan batas pengujian: [SVG paint fidelity](docs/SVG_PAINT_FIDELITY.md).
 
+## Native multi-contour SVG holes — Alight Motion Android verified XML schema
+
+A real Alight Motion 5.0.273 Android project export confirmed this schema:
+
+```xml
+<shape fillType="color" label="One editable layer">
+  <transform><location value="100,100,0"/></transform>
+  <fillColor value="#ffffb900"/>
+  <path>
+    <contour d="M 0 0 L 90 0 L 90 90 L 0 90 Z"/>
+    <contour exclude="true" d="M 15 15 L 15 30 L 30 30 L 30 15 Z"/>
+  </path>
+</shape>
+```
+
+Native `<path><contour .../></path>` replaces the former connected-bridge workaround for
+compound paths. One source SVG `<path>` now remains **one Alight shape**, even if it has
+25 internal contours. Holes are not individual mask layers and no artificial
+long diagonal connector paths are drawn. Source Bézier commands remain unchanged
+without anchor-point reduction.
+
+The engine detects nested holes, disconnected islands, and `evenodd`/`nonzero`
+fill rules using source-agnostic winding and containment checks. Unsupported
+intersecting/touching/degenerate path topologies fail closed with a
+`NATIVE_CONTOUR_*` error instead of exporting broken shapes. Single-contour
+shapes continue using the existing `<path d="..."/>` format, and existing
+hierarchy/stroke/paint pipelines are preserved.
+
+**Validation boundary:** the native contour syntax and exclude flag are
+directly supported by a user-exported Android Alight Motion project, and the
+automatic tests pass. The final converted Barcelona and Logo Seko samples
+still require physical Android import validation before describing visual
+parity as perfect for all shapes.
+
 ## Engine
 
 ### Maximum Fidelity

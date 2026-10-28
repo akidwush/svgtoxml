@@ -9,7 +9,7 @@
     "benchmark:color-groups": "node scripts/benchmark-color-groups.mjs",
     "benchmark:color-groups-overlap": "node scripts/benchmark-color-groups-overlap.mjs",
     "benchmark:color-groups-real-complex": "node scripts/benchmark-color-groups-real-complex.mjs",
-    "check": "node --check api/convert.js && node --check api/health.js && node --check api/v1/convert.js && node --check api/v1/health.js && node --check api/v1/auth.js && node --check api/v1/engines.js && node --check lib/api-auth.js && node --check lib/api-http.js && node --check lib/alight-compatibility.js && node --check lib/path-geometry-core.js && node --check lib/path-geometry.js && node --check lib/converter-core.js && node --check lib/converter.js && node --check scripts/benchmark-color-groups-overlap.mjs && node --check scripts/benchmark-color-groups-real-complex.mjs && node --check app.js && node --check lib/svg-paint.js && node --check scripts/verify-svg-paint.mjs",
+    "check": "node --check api/convert.js && node --check api/health.js && node --check api/v1/convert.js && node --check api/v1/health.js && node --check api/v1/auth.js && node --check api/v1/engines.js && node --check lib/api-auth.js && node --check lib/api-http.js && node --check lib/alight-compatibility.js && node --check lib/path-geometry-core.js && node --check lib/path-geometry.js && node --check lib/native-contours.js && node --check lib/converter-core.js && node --check lib/converter.js && node --check scripts/benchmark-color-groups-overlap.mjs && node --check scripts/benchmark-color-groups-real-complex.mjs && node --check app.js && node --check lib/svg-paint.js && node --check scripts/verify-svg-paint.mjs",
     "verify:paint": "node scripts/verify-svg-paint.mjs"
   },
   "dependencies": {
