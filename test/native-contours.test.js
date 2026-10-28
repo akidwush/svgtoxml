@@ -219,3 +219,47 @@ test('single-contour paths and already explicitly closed native paths keep their
   assert.equal(plan.contours[0].d.match(/Z/g).length,1);
   assert.equal(plan.contours[1].d.match(/Z/g).length,1);
 });
+
+test('single filled SVG path without Z closes in native AM, without changing shape count',()=>{
+  const d='M 0 0 C 0 20 30 20 30 0 L 30 30 L 0 30';
+  const plan=nativeContourPlan(d,{fill:true,stroke:false});
+  assert.equal(plan.ok,true);
+  assert.equal(plan.compound,false);
+  assert.equal(plan.contours[0].d.trim().endsWith('Z'),true);
+  assert.match(plan.contours[0].d,/C 0 20 30 20 30 0/);
+  const svg='<svg width="40" height="40"><path id="single-filled-open" fill="red" d="'+d+'"/></svg>';
+  const out=convertSvgToAlightXml(svg,{quality:'maximum-fidelity'});
+  const $=load(out.xml,{xmlMode:true});
+  assert.equal($('shape[label="single-filled-open"]').length,1);
+  assert.ok($('shape[label="single-filled-open"] > path').attr('d').trim().endsWith('Z'));
+  assert.equal($('shape[label="single-filled-open"] > path > contour').length,0);
+  assert.equal(out.validation.compatibility.ok,true);
+});
+
+test('single stroke-only path without Z stays open and never acquires a visible closing edge',()=>{
+  const d='M 0 0 L 30 0 L 30 30';
+  assert.equal(nativeContourPlan(d,{fill:false,stroke:true}).contours[0].d.endsWith('Z'),false);
+  const svg='<svg width="40" height="40"><path id="open-stroke" fill="none" stroke="black" stroke-width="2" d="'+d+'"/></svg>';
+  const out=convertSvgToAlightXml(svg,{quality:'maximum-fidelity'});
+  const $=load(out.xml,{xmlMode:true});
+  assert.equal($('shape[label="open-stroke"] > path').attr('d').trim().endsWith('Z'),false);
+  assert.equal($('path-stroke').length,1);
+});
+
+test('multiple SVG subpaths all implicitly closed have native closures and transparent holes',()=>{
+  const d='M 0 0 L 80 0 L 80 80 L 0 80 ' +
+    'M 10 10 L 10 20 L 20 20 L 20 10 ' +
+    'M 40 40 L 40 55 L 55 55 L 55 40';
+  const plan=nativeContourPlan(d);
+  assert.equal(plan.ok,true);
+  assert.equal(plan.contours.length,3);
+  assert.deepEqual(plan.contours.map(x=>x.exclude),[false,true,true]);
+  assert.equal(plan.contours.every(x=>x.d.trim().endsWith('Z')),true);
+  const svg='<svg width="80" height="80"><path id="all-implicit" fill="#2cc2d3" d="'+d+'"/></svg>';
+  const xml=convertSvgToAlightXml(svg,{quality:'maximum-fidelity'}).xml;
+  const $=load(xml,{xmlMode:true});
+  const contours=$('shape[label="all-implicit"] > path > contour');
+  assert.equal(contours.length,3);
+  assert.equal(contours.filter('[exclude="true"]').length,2);
+  assert.equal(contours.toArray().every(c=>$(c).attr('d').trim().endsWith('Z')),true);
+});
