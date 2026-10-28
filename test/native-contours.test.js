@@ -118,3 +118,42 @@ test('contour sharing a boundary fails closed instead of introducing mask ambigu
   assert.equal(result.ok,false);
   assert.match(result.code,/NATIVE_CONTOUR_/);
 });
+
+test('large real-world tracing topology: 110 contours with a >500k-point candidate pair',()=>{
+  // Reproduces old crosses() hard rejection for a valid traced shape:
+  // dense outer Bézier outline + many genuine disjoint negative spaces.
+  function ring(cx,cy,r,n,clockwise=false) {
+    const pts=Array.from({length:n},(_,i)=>{
+      const t=2*Math.PI*i/n*(clockwise?-1:1);
+      return [Number((cx+r*Math.cos(t)).toFixed(5)),Number((cy+r*Math.sin(t)).toFixed(5))];
+    });
+    return 'M '+pts[0].join(' ')+' '+pts.slice(1).map(p=>'L '+p.join(' ')).join(' ')+' Z';
+  }
+  const manyHoles=[
+    ring(1500,850,100,500,true),
+    ...Array.from({length:108},(_,i)=>
+      ring(1100+(i%12)*55,1500+Math.floor(i/12)*55,9,12,true))
+  ];
+  const d=[ring(1500,1500,1400,1800,false),...manyHoles].join(' ');
+  const plan=nativeContourPlan(d);
+  assert.equal(plan.ok,true,plan.code);
+  assert.equal(plan.contours.length,110);
+  assert.equal(plan.contours.filter(x=>x.exclude).length,109);
+  assert.equal(plan.contours[0].exclude,false);
+
+  const svg='<svg width="3000" height="3000"><path id="dense" fill="#210a41" d="'+d+'"/></svg>';
+  const out=convertSvgToAlightXml(svg,{quality:'maximum-fidelity'});
+  const $=load(out.xml,{xmlMode:true});
+  assert.equal($('shape[label="dense"]').length,1);
+  assert.equal($('shape[label="dense"] > path > contour').length,110);
+  assert.equal($('shape[label="dense"] > path > contour[exclude="true"]').length,109);
+  assert.equal(out.validation.compatibility.ok,true);
+});
+
+test('spatially indexed topology still rejects crossing contours in complex paths',()=>{
+  const outer='M 0 0 L 1000 0 L 1000 1000 L 0 1000 Z';
+  const bad='M 500 -10 L 520 -10 L 520 20 L 500 20 Z';
+  const plan=nativeContourPlan(outer+' '+bad);
+  assert.equal(plan.ok,false);
+  assert.equal(plan.code,'NATIVE_CONTOUR_OVERLAP_UNSUPPORTED');
+});
