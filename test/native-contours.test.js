@@ -38,8 +38,9 @@ test('25 source contours are a single editable AM shape, not 25 separate layers'
 
 test('supports source-independent disjoint islands and nesting with mixed winding',()=>{
   const island='M 240 0 L 340 0 L 340 100 L 240 100 Z';
-  const innerIsland='M 25 25 L 35 25 L 35 35 L 25 35 Z';
-  const d=[outer,hole(20,20),innerIsland,island].join(' ');
+  const largeHole='M 20 20 L 20 80 L 80 80 L 80 20 Z';
+  const innerIsland='M 35 35 L 45 35 L 45 45 L 35 45 Z';
+  const d=[outer,largeHole,innerIsland,island].join(' ');
   const plan=nativeContourPlan(d,{fillRule:'evenodd'});
   assert.equal(plan.ok,true);
   assert.deepEqual(plan.contours.map(x=>x.exclude),[false,true,false,false]);
