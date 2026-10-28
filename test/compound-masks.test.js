@@ -54,6 +54,11 @@ test('Maximum Fidelity opt-in emits one group with separate editable masks, not 
   assert.equal(out.validation.compatibility.ok,true);
   assert.equal(out.stats.outputShapes,1,'source shape stays one source shape');
   assert.equal(out.profile.quality,'lossless');
+  assert.equal(out.stats.contourMaskGroups,1);
+  assert.equal(out.stats.contourMaskHoles,24);
+  assert.equal(out.profile.contourMaskHoles,24);
+  assert.equal(out.fidelity.exact,false,'Android native mask compositing remains unverified');
+  assert.ok(out.fidelity.losses.some(loss=>loss.code==='contour-mask-unverified'));
 });
 
 test('Mask mode does not change single-path, stroked compound, or legacy default output',()=>{
@@ -72,4 +77,23 @@ test('reject unsupported native mask options instead of silently reverting',()=>
   assert.throws(()=>convertSvgToAlightXml('<svg width="10" height="10"><rect width="10" height="10"/></svg>',{
     quality:'maximum-fidelity',compoundPathMode:'random'
   }),(error)=>error?.code==='COMPOUND_PATH_MODE_NOT_SUPPORTED');
+});
+
+test('opt-in fails closed instead of hiding unrepresentable compound geometry',()=>{
+  const sameWinding='M 0 0 L 100 0 L 100 100 L 0 100 Z M 20 20 L 30 20 L 30 30 L 20 30 Z';
+  const svg='<svg width="100" height="100"><path id="ambiguous" fill="red" d="'+sameWinding+'"/></svg>';
+  assert.throws(()=>convertSvgToAlightXml(svg,{
+    quality:'maximum-fidelity',compoundPathMode:'masks'
+  }),e=>e?.code==='COMPOUND_MASK_TOPOLOGY_UNSUPPORTED');
+  assert.throws(()=>convertSvgToAlightXml(svg,{
+    quality:'color-groups',compoundPathMode:'masks'
+  }),e=>e?.code==='COMPOUND_PATH_MODE_UNAVAILABLE');
+});
+
+test('requireExact refuses to call an unverified Android mask implementation exact',()=>{
+  const svg='<svg width="100" height="100"><path fill="red" d="'+
+   'M 0 0 L 100 0 L 100 100 L 0 100 Z '+ hole(20,20)+'"/></svg>';
+  assert.throws(()=>convertSvgToAlightXml(svg,{
+    quality:'maximum-fidelity',compoundPathMode:'masks',requireExact:true
+  }),e=>e?.code==='FIDELITY_REQUIREMENT_FAILED');
 });
