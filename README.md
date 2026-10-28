@@ -61,6 +61,33 @@ Kontrak default: `strict-one-color`.
 
 Metadata ringkas tersedia pada `grouping`, termasuk candidate paint, fallback reason histogram, geometry checks, actual overlaps, touching pairs, constraints, dan conflict count.
 
+## Experimental contour masks (optional, not production default)
+
+For SVG compound paths where Alight Motion Edit Points displays long fan-shaped
+connector lines, Maximum Fidelity and Small Patch Cleanup now accept
+`compoundPathMode: "masks"` as an experimental POST option:
+
+```json
+{
+  "svg": "<svg>...</svg>",
+  "options": {
+    "quality": "maximum-fidelity",
+    "compoundPathMode": "masks"
+  }
+}
+```
+
+This attempts to convert one closed outer contour and its disjoint inner holes
+into an isolated Alight nested scene with editable per-hole shapes using
+`blending="exclude"`. It preserves the source Bézier curves and avoids
+fabricated bridge segments in those supported shapes. It does **not** promise
+universal SVG topology: strokes, complex paint, disjoint islands, intersecting
+contours, and unsupported nesting remain on the existing geometry path.
+
+**The masks option has not been verified with the native Android Alight
+renderer.** Keep the default `bridges` until device testing confirms correct
+transparency, source ordering, layer isolation and edit-point behavior.
+
 ## Endpoint
 
 ### Daftar engine
