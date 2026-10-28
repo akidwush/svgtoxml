@@ -81,12 +81,17 @@ This attempts to convert one closed outer contour and its disjoint inner holes
 into an isolated Alight nested scene with editable per-hole shapes using
 `blending="exclude"`. It preserves the source Bézier curves and avoids
 fabricated bridge segments in those supported shapes. It does **not** promise
-universal SVG topology: strokes, complex paint, disjoint islands, intersecting
-contours, and unsupported nesting remain on the existing geometry path.
+universal SVG topology: stroked compound paths retain their original
+stroke geometry, while unsupported unstroked compound topology (disjoint
+islands, intersecting contours, complex paint or unknown nesting) is
+rejected with `COMPOUND_MASK_TOPOLOGY_UNSUPPORTED` rather than silently emitting
+unwanted bridge segments.
 
 **The masks option has not been verified with the native Android Alight
-renderer.** Keep the default `bridges` until device testing confirms correct
-transparency, source ordering, layer isolation and edit-point behavior.
+renderer.** It is marked `contour-mask-unverified` in the fidelity report, and
+`requireExact: true` rejects it. The website offers an explicit experimental
+toggle; keep `bridges` as default until Android confirms correct transparency,
+source ordering, isolation and edit-point behavior.
 
 ## Endpoint
 
