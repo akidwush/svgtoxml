@@ -102,3 +102,19 @@ test('validator rejects malformed native multi-contour attributes and mixed old/
   assert.throws(()=>validateAlightImportXml(xml.replace('<contour exclude="true"','<bad-contour exclude="true"')),
     e=>e?.code==='ALIGHT_XML_COMPATIBILITY_FAILED');
 });
+
+test('disconnected islands with overlapping bounding boxes remain distinct, not errors',()=>{
+  const first='M 0 0 L 4 0 L 0 4 Z';
+  const second='M 3 3 L 7 3 L 3 7 Z';
+  const result=nativeContourPlan(first+' '+second);
+  assert.equal(result.ok,true);
+  assert.deepEqual(result.contours.map(c=>c.exclude),[false,false]);
+});
+
+test('contour sharing a boundary fails closed instead of introducing mask ambiguity',()=>{
+  const a='M 0 0 L 100 0 L 100 100 L 0 100 Z';
+  const b='M 100 20 L 120 20 L 120 40 L 100 40 Z';
+  const result=nativeContourPlan(a+' '+b);
+  assert.equal(result.ok,false);
+  assert.match(result.code,/NATIVE_CONTOUR_/);
+});
