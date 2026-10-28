@@ -38,6 +38,8 @@ function applyPreset(name) {
   $('protectThinPercent').value = 2.0;
   $('patchAreaPercent').disabled = !patchMode;
   $('protectThinPercent').disabled = !patchMode;
+  $('compoundPathMode').disabled = colorMode;
+  if (colorMode) $('compoundPathMode').value = 'bridges';
   $('losslessNote').classList.toggle('hidden', patchMode || colorMode);
   $('colorGroupNote').classList.toggle('hidden', !colorMode);
   $('patchNote').classList.toggle('hidden', !patchMode);
@@ -159,7 +161,9 @@ convertBtn.addEventListener('click', async () => {
           patchAreaPercent: Number($('patchAreaPercent').value),
           protectThinPercent: Number($('protectThinPercent').value),
           validateBounds: quality.value === 'lossless',
-          requireExact: quality.value === 'lossless'
+          compoundPathMode: $('compoundPathMode').value,
+          // Mask compositing is experimental until Android device verification.
+          requireExact: quality.value === 'lossless' && $('compoundPathMode').value !== 'masks'
         }
       })
     });
@@ -184,6 +188,8 @@ convertBtn.addEventListener('click', async () => {
     const colorMode = data.profile?.quality === 'color-group';
     const fidelityExact = data.fidelity?.exact === true;
     const fidelityLosses = data.fidelity?.losses?.length || 0;
+    const nativeMasks = data.stats?.contourMaskGroups || 0;
+    const maskHoles = data.stats?.contourMaskHoles || 0;
 
     statsEl.innerHTML = patchMode ? [
       stat('Shape output', data.stats.outputShapes ?? 0),
@@ -203,6 +209,10 @@ convertBtn.addEventListener('click', async () => {
       stat('Ukuran XML', `${((data.stats.outputBytes || 0) / 1024).toFixed(1)} KB`)
     ].join('') : [
       stat('Shape output', data.stats.outputShapes ?? 0),
+      ...(nativeMasks > 0 ? [
+        stat('Mask group (eksperimen)', nativeMasks),
+        stat('Kontur lubang terpisah', maskHoles)
+      ] : []),
       stat('Node', `${data.stats.nodesBefore ?? 0} → ${data.stats.nodesAfter ?? 0}`),
       stat('Stroke native', data.stats.strokes ?? 0),
       stat('clipPath mask', data.stats.clipPathsApplied ?? 0),
