@@ -62,8 +62,8 @@ test('implicitly closed Vector Magic-style contours are joined without losing cu
   ].join(' ');
   const result = bridgeFilledSubpaths(source);
   assert.equal(result.bridged, true);
-  assert.equal((result.path.match(/M\\s/g) || []).length, 1);
-  assert.equal((result.path.match(/C\\s/g) || []).length, 2);
+  assert.equal((result.path.match(/M\s/g) || []).length, 1);
+  assert.equal((result.path.match(/C\s/g) || []).length, 2);
   assert.match(result.path, /L 0 0 L 2 2/);
   assert.match(result.path, /L 2 2 L 0 0 Z$/);
 });
@@ -79,8 +79,8 @@ test('six subpaths with a single final Z become one contour, preserving all sect
   ].join(' ');
   const result = bridgeFilledSubpaths(source);
   assert.equal(result.bridged, true);
-  assert.equal((result.path.match(/M\\s/g) || []).length, 1);
-  assert.equal((result.path.match(/L\\s/g) || []).length > (source.match(/L\\s/g) || []).length, true);
+  assert.equal((result.path.match(/M\s/g) || []).length, 1);
+  assert.equal((result.path.match(/L\s/g) || []).length > (source.match(/L\s/g) || []).length, true);
   assert.equal(result.path.endsWith('Z'), true);
 });
 
@@ -92,7 +92,7 @@ test('all engines bridge Vector Magic-style implicit ring holes; strokes stay un
     const out = convertSvgToAlightXml(svg, { quality, patchAreaPercent: 0 });
     const $ = load(out.xml, { xmlMode: true });
     const path = $('shape[label="implicit-ring"] > path').attr('d');
-    assert.equal((path.match(/M\\s/g) || []).length, 1, quality);
+    assert.equal((path.match(/M\s/g) || []).length, 1, quality);
     assert.equal(out.validation.compatibility.ok, true, quality);
   }
 });
