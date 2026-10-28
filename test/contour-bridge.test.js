@@ -64,8 +64,10 @@ test('implicitly closed Vector Magic-style contours are joined without losing cu
   assert.equal(result.bridged, true);
   assert.equal((result.path.match(/M\s/g) || []).length, 1);
   assert.equal((result.path.match(/C\s/g) || []).length, 2);
-  assert.match(result.path, /L 0 0 L 2 2/);
-  assert.match(result.path, /L 2 2 L 0 0 Z$/);
+  assert.equal(result.bridges.length, 1);
+  assert.ok(result.bridges[0].distance < 5, 'bridge should attach to nearby painted edge');
+  assert.match(result.path, /L 2 2/);
+  assert.match(result.path, /Z$/);
 });
 
 test('six subpaths with a single final Z become one contour, preserving all sections', () => {
@@ -95,4 +97,25 @@ test('all engines bridge Vector Magic-style implicit ring holes; strokes stay un
     assert.equal((path.match(/M\s/g) || []).length, 1, quality);
     assert.equal(out.validation.compatibility.ok, true, quality);
   }
+});
+
+test('short bridges attach each hole to nearest painted edge instead of drawing diagonals', () => {
+  const source = [
+    'M 0 0 L 400 0 L 400 400 L 0 400 Z',
+    'M 10 200 L 10 220 L 30 220 L 30 200 Z',
+    'M 370 180 L 370 200 L 390 200 L 390 180 Z'
+  ].join(' ');
+  const result = bridgeFilledSubpaths(source);
+  assert.equal(result.bridged, true);
+  assert.equal(result.bridges.length, 2);
+  // The old approach linked both holes to M 0 0 through the empty interior.
+  assert.ok(result.bridges.every((b) => b.distance < 230));
+  assert.equal((result.path.match(/M\s/g) || []).length, 1);
+});
+
+test('disconnected filled islands are not stitched into fabricated bridges', () => {
+  const path = 'M 0 0 L 30 0 L 30 30 L 0 30 Z M 40 0 L 70 0 L 70 30 L 40 30 Z';
+  const result = bridgeFilledSubpaths(path);
+  assert.equal(result.bridged, false);
+  assert.equal(result.path, path);
 });
