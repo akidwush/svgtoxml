@@ -157,3 +157,65 @@ test('spatially indexed topology still rejects crossing contours in complex path
   assert.equal(plan.ok,false);
   assert.equal(plan.code,'NATIVE_CONTOUR_OVERLAP_UNSUPPORTED');
 });
+
+test('Vector Magic implicit closures become native Z for all filled holes, no new layers',()=>{
+  // Exactly the real Vector Magic structure: many M commands, only one Z.
+  const d=[
+    'M 0 0 C 0 -10 200 -10 200 0 L 200 200 L 0 200',
+    'M 15 15 L 15 45 L 45 45 L 45 15',
+    'M 65 15 C 60 35 80 45 95 15 L 65 15',
+    'M 115 15 L 115 45 L 145 45 L 145 15',
+    'M 15 75 L 15 95 L 45 95 L 45 75',
+    'M 65 75 L 65 95 L 95 95 L 95 75',
+    'M 115 75 L 115 95 L 145 95 L 145 75 Z'
+  ].join(' ');
+  const plan=nativeContourPlan(d);
+  assert.equal(plan.ok,true,plan.code);
+  assert.equal(plan.contours.length,7);
+  assert.deepEqual(plan.contours.map(c=>c.exclude),[false,true,true,true,true,true,true]);
+  assert.ok(plan.contours.every(c=>/Z$/.test(c.d.trim())), 'every filled native contour must be explicitly closed');
+  assert.equal(plan.contours[1].d.endsWith('45 15 Z'),true);
+  assert.match(plan.contours[2].d,/C 60 35 80 45 95 15/);
+
+  const svg='<svg width="200" height="200"><path id="eyes" fill="#2cc2d3" d="'+d+'"/></svg>';
+  for(const quality of ['maximum-fidelity','patch-clean','color-groups']){
+    const out=convertSvgToAlightXml(svg,{quality,patchAreaPercent:0});
+    const $=load(out.xml,{xmlMode:true});
+    const cs=$('shape[label="eyes"] > path > contour');
+    assert.equal(cs.length,7,quality);
+    assert.equal(cs.filter('[exclude="true"]').length,6,quality);
+    assert.ok(cs.toArray().every(el=>/Z$/.test($(el).attr('d').trim())),quality);
+    assert.equal(out.validation.compatibility.ok,true);
+  }
+});
+
+test('stroke-only multi contours retain open endpoints instead of being artificially closed',()=>{
+  const d='M 0 0 L 40 0 M 0 20 L 40 20';
+  const plan=nativeContourPlan(d,{fill:false,stroke:true});
+  assert.equal(plan.ok,true);
+  assert.equal(plan.contours.length,2);
+  assert.ok(plan.contours.every(c=>!c.d.endsWith('Z')));
+  const svg='<svg width="100" height="100"><path fill="none" stroke="#000" stroke-width="2" d="'+d+'"/></svg>';
+  const out=convertSvgToAlightXml(svg,{quality:'maximum-fidelity'});
+  const $=load(out.xml,{xmlMode:true});
+  assert.equal($('path > contour').length,2);
+  assert.ok($('path > contour').toArray().every(c=>!$(c).attr('d').endsWith('Z')));
+});
+
+test('mixed fill and stroke with implicit closure fails safely rather than adding stroke edges',()=>{
+  const d='M 0 0 L 100 0 L 100 100 L 0 100 M 20 20 L 20 30 L 30 30 L 30 20 Z';
+  assert.equal(nativeContourPlan(d,{fill:true,stroke:true}).code,'NATIVE_CONTOUR_MIXED_STROKE_CLOSURE_UNSUPPORTED');
+  const svg='<svg width="100" height="100"><path d="'+d+'" fill="#abc" stroke="#123" stroke-width="2"/></svg>';
+  assert.throws(()=>convertSvgToAlightXml(svg,{quality:'maximum-fidelity'}),
+    e=>e?.code==='NATIVE_CONTOUR_MIXED_STROKE_CLOSURE_UNSUPPORTED');
+});
+
+test('single-contour paths and already explicitly closed native paths keep their representation',()=>{
+  const single='M 0 0 L 10 0 L 10 10 L 0 10';
+  assert.equal(nativeContourPlan(single).compound,false);
+  const two='M 0 0 L 100 0 L 100 100 L 0 100 Z M 20 20 L 20 30 L 30 30 L 30 20 Z';
+  const plan=nativeContourPlan(two);
+  assert.equal(plan.ok,true);
+  assert.equal(plan.contours[0].d.match(/Z/g).length,1);
+  assert.equal(plan.contours[1].d.match(/Z/g).length,1);
+});
