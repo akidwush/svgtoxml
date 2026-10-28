@@ -50,6 +50,16 @@
             <input id="protectThinPercent" type="number" min="0" max="100" step="0.1" value="2.0" />
           </label>
         </div>
+        <div class="grid">
+          <label>
+            <span>Compound contour — eksperimen</span>
+            <select id="compoundPathMode">
+              <option value="bridges" selected>Default — sambungan antar-kontur</option>
+              <option value="masks">Isolated Masks — kontur terpisah tanpa garis diagonal</option>
+            </select>
+          </label>
+        </div>
+        <p class="mini">Mode Isolated Masks masih perlu diuji langsung di Alight Motion Android. Output tidak dinyatakan exact sebelum uji perangkat. Kontur dengan topologi yang belum didukung akan ditolak.</p>
         <p id="losslessNote" class="mini">Maximum Fidelity: z-order asli, native stroke, gradient, clipPath, group opacity, presisi 8, tanpa grouping dan tanpa node reduction. Output ditolak jika strict audit menemukan loss yang diketahui.</p>
         <p id="colorGroupNote" class="mini hidden">Smart Color Groups memakai effective paint, actual path topology, dan graph z-order. Gradient, stroke, transparency, clip, mask, filter, dan compositing kompleks tetap menjadi fallback terpisah. Source path tidak digabung.</p>
         <p id="patchNote" class="mini hidden">Small Patch Cleanup memakai pipeline Maximum Fidelity yang sama dengan ambang default lebih agresif. Patch compact kecil dibuang lebih cepat, sementara detail yang benar-benar panjang dan tipis tetap dilindungi.</p>
