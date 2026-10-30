@@ -9,6 +9,7 @@ import { convertSvgToAlightXml } from '../lib/converter.js';
 
 const artifacts = path.resolve(process.env.SVG_PAINT_ARTIFACTS || 'artifacts/svg-paint');
 const fixtures = [
+  {name:'gradient-zero-bounds',svg:'<svg xmlns="http://www.w3.org/2000/svg" width="220" height="100"><defs><linearGradient id="g"><stop stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient></defs><path fill="url(#g)" d="M10 10L80 10L80 80L10 80Z M180 10L200 10Z"/></svg>'},
   ...['zero-paint-compound','reported-layout-synthetic'].map(name=>({name,svg:fs.readFileSync(new URL('../test/fixtures/'+name+'.svg',import.meta.url),'utf8')})),
   {name:'nested-evenodd',svg:'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><path fill="#201f1e" fill-rule="evenodd" d="M10 10L190 10L190 190L10 190Z M30 30L170 30L170 170L30 170Z M60 60L140 60L140 140L60 140Z M80 80L120 80L120 120L80 120Z M15 15C16 15 18 15 15 15Z"/></svg>'},
   {name:'nested-nonzero',svg:'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><path fill="#201f1e" d="M10 10L190 10L190 190L10 190Z M30 30L170 30L170 170L30 170Z M15 15C16 15 18 15 15 15Z"/></svg>'},

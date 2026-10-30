@@ -64,6 +64,13 @@ for compounds with actual fill. Fully zero-paint shapes retain their real origin
 geometry because the native XML grammar requires a nonempty path; no placeholder
 or fake contour is generated.
 
+A zero-fill contour may still influence an objectBoundingBox gradient. The
+converter therefore requests `preserveFillBounds` for gradient paint: the real
+contour stays in XML, while only its zero winding is excluded from topology
+classification. A regression renders an outlying zero-area subpath whose bounds
+affect the colors of a visible filled rectangle; removing it would stretch the
+gradient incorrectly. All three engines preserve its original colors.
+
 Tiny **nonzero** areas are not discarded using EPS. Non-finite coordinates fail
 parsing, and unsupported numeric area ranges remain controlled failures. Existing
 8-decimal XML serialization, cubic curve geometry, native `<contour>` schema,
@@ -75,8 +82,8 @@ algorithm for every possible SVG.
 `converter-core.js` also uses the filtered native path when only one contour
 survives. Otherwise its previous single-path fast path would reinsert the old
 compound string. `converter.js` adds per-conversion aggregate counters in
-`stats.nativeContours`: `inputContours`, `removedFillContours`, and
-`retainedStrokeContours`. They count native serialization calls, including clip
+`stats.nativeContours`: `inputContours`, `removedFillContours`,
+`retainedStrokeContours`, and `retainedBoundsContours`. They count native serialization calls, including clip
 components where present. A synchronous, nested-safe diagnostic scope restores
 state after errors; API stats contain no source paths, coordinate dumps or keys.
 
@@ -88,7 +95,7 @@ state after errors; API stats contain no source paths, coordinate dumps or keys.
 | `lib/native-contours.js` | Paint-aware classification, preserved strokes, inspection and counter scope |
 | `lib/converter-core.js` | Serialize a filtered single survivor rather than original compound data |
 | `lib/converter.js` | Aggregate native contour diagnostics for actual conversions |
-| `test/contour-degeneracy.test.js` | 15 regression tests, including real local API handler calls |
+| `test/contour-degeneracy.test.js` | 16 regression tests, including real local API handler calls |
 | `test/fixtures/zero-paint-compound.svg` | Minimal authored reproducer with real transparent hole |
 | `test/fixtures/reported-layout-synthetic.svg` | Explicitly synthetic reported-count regression |
 | `scripts/verify-svg-paint.mjs` | Reconstruct native contours from output XML and compare actual pixels |
@@ -104,9 +111,9 @@ state after errors; API stats contain no source paths, coordinate dumps or keys.
 | Baseline `npm run check`, `npm test` | PASS; 181 tests before changes |
 | `npm ci --cache /tmp/svg-native-recovery/npm-cache --no-audit --no-fund` | PASS; 37 packages, frozen lockfile, checksums/TLS unchanged |
 | `npm run check` | PASS |
-| `npm test` | PASS; 196 tests, no skips; 181 existing + 15 new |
-| `node --test test/contour-degeneracy.test.js` | PASS; 15 tests |
-| `npm run verify:paint` with installed Chromium | PASS; 32 fixture/engine combinations |
+| `npm test` | PASS; 197 tests, no skips; 181 existing + 16 new |
+| `node --test test/contour-degeneracy.test.js` | PASS; 16 tests |
+| `npm run verify:paint` with installed Chromium | PASS; 35 fixture/engine combinations |
 | All three `npm run benchmark:color-groups*` scripts | PASS; existing budgets/assertions unchanged |
 | `node scripts/inspect-native-contours.mjs test/fixtures/reported-layout-synthetic.svg` | PASS; 113 editable shapes, exactly 2 fill contours removed; compatibility gate passes |
 | `node scripts/verify-nexora-native-contours.mjs` with V1 checkout available | PASS; 360/390/412/1440 px, actual conversion response, full preview/copy/download equality, single-submit and controlled failure |
@@ -138,7 +145,7 @@ Generated comparison geometry is test-only, not production masks or raster outpu
 
 Canvas dimensions and every pixel's alpha and visible RGB channels are compared,
 composited against both white and black. A maximum delta of **2 in an 8-bit
-channel** allows existing ARGB/alpha rounding. Observed maximum across all 32 cases
+channel** allows existing ARGB/alpha rounding. Observed maximum across all 35 cases
 was approximately **2.84e-14**, floating-point noise. The synthetic hole's central
 alpha is explicitly asserted to be zero in source and reconstructed output.
 Nested evenodd holes/islands, same-winding nonzero nesting, implicit closures,

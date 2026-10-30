@@ -19,7 +19,7 @@ test('only proven zero-paint fill contours are removed, for both SVG winding rul
     assert.equal(result.ok,true,result.code);
     assert.equal(result.contours.length,2);
     assert.deepEqual(result.contours.map(c=>c.exclude),[false,true]);
-    assert.deepEqual(result.diagnostics,{inputContours:4,removedFillContours:2,retainedStrokeContours:0});
+    assert.deepEqual(result.diagnostics,{inputContours:4,removedFillContours:2,retainedStrokeContours:0,retainedBoundsContours:0});
     assert.equal(inspectNativeContours(line)[0].proof,'collinear-control-hull');
     assert.equal(inspectNativeContours(retraced)[0].proof,'exact-retraced-edges');
   }
@@ -33,6 +33,15 @@ test('single survivor serializes the filtered path, never the original rejected 
   assert.equal(result.stats.nativeContours.removedFillContours,1);
   assert.equal(result.fidelity.exact,true);
   assert.equal(result.validation.compatibility.ok,true);
+});
+
+test('empty fill geometry affecting gradient bounds is retained without rejecting the whole path',()=>{
+  const d='M10 10L80 10L80 80L10 80Z M180 10L200 10Z';
+  const source='<svg xmlns="http://www.w3.org/2000/svg" width="220" height="100"><defs><linearGradient id="g"><stop stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient></defs><path d="'+d+'" fill="url(#g)"/></svg>';
+  const out=convertSvgToAlightXml(source,{quality:'maximum-fidelity',requireExact:true});
+  const $=load(out.xml,{xmlMode:true});assert.equal($('path > contour').length,2);assert.equal($('gradient').length,1);
+  assert.equal(out.stats.nativeContours.removedFillContours,0);assert.equal(out.stats.nativeContours.retainedBoundsContours,1);
+  assert.equal(out.validation.compatibility.ok,true);
 });
 
 test('stroke-only and mixed paint retain zero-area strokes in the same editable shape',()=>{
