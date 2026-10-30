@@ -4,10 +4,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DOMParser } from '@xmldom/xmldom';
 import { chromium } from 'playwright';
+import svgpath from 'svgpath';
 import { convertSvgToAlightXml } from '../lib/converter.js';
 
 const artifacts = path.resolve(process.env.SVG_PAINT_ARTIFACTS || 'artifacts/svg-paint');
 const fixtures = [
+  ...['zero-paint-compound','reported-layout-synthetic'].map(name=>({name,svg:fs.readFileSync(new URL('../test/fixtures/'+name+'.svg',import.meta.url),'utf8')})),
+  {name:'nested-evenodd',svg:'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><path fill="#201f1e" fill-rule="evenodd" d="M10 10L190 10L190 190L10 190Z M30 30L170 30L170 170L30 170Z M60 60L140 60L140 140L60 140Z M80 80L120 80L120 120L80 120Z M15 15C16 15 18 15 15 15Z"/></svg>'},
+  {name:'nested-nonzero',svg:'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><path fill="#201f1e" d="M10 10L190 10L190 190L10 190Z M30 30L170 30L170 170L30 170Z M15 15C16 15 18 15 15 15Z"/></svg>'},
+  {name:'mixed-zero-stroke',svg:'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><path fill="#201f1e" stroke="#ef2161" stroke-width="2" d="M10 10L190 10L190 190L10 190Z M20 20C30 20 40 20 20 20Z M70 70C70 90 90 90 90 70C90 90 70 90 70 70Z"/></svg>'},
+  {name:'stroke-only-zero',svg:'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><path fill="none" stroke="#ef2161" stroke-width="2" d="M20 20C30 20 40 20 20 20 M70 70C70 90 90 90 90 70C90 90 70 90 70 70"/></svg>'},
+  {name:'implicit-holes',svg:'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><path fill="#201f1e" d="M10 10C10 8 190 8 190 10L190 190L10 190 M30 30L30 60L60 60L60 30 M20 20C30 20 40 20 20 20"/></svg>'},
   {name: 'legacy', svg: `<?xml version="1.0"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
   <svg xmlns="http://www.w3.org/2000/svg" width="240" height="120" viewBox="0 0 240 120"><style><![CDATA[.green {fill:rgb(0,170,90)}]]></style>
   <rect class="green" x="10" y="10" width="50" height="50"/><rect x="70" y="10" width="50" height="50" fill="rebeccapurple"/>
@@ -29,12 +36,36 @@ const fixtures = [
   <path d="M130 10 C180 10 180 70 130 70 C110 60 110 20 130 10Z" fill="hwb(330 10% 10%)"/></g>
   <path d="M20 100 C40 60 100 150 120 90 L160 130L20 130Z" fill="color(srgb .2 .4 .8)"/></svg>`}
 ];
+const sourceIndex=process.argv.indexOf('--source');
+if(sourceIndex>=0)fixtures.push({name:'user-source',svg:fs.readFileSync(process.argv[sourceIndex+1],'utf8')});
 const children = node => Array.from(node.childNodes || []).filter(n => n.nodeType === 1);
 const child = (node, tag) => children(node).find(n => n.tagName === tag);
 const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
 function color(argb) { const s = argb.replace('#', ''); return `rgb(${parseInt(s.slice(2,4),16)} ${parseInt(s.slice(4,6),16)} ${parseInt(s.slice(6,8),16)} / ${parseInt(s.slice(0,2),16)/255})`; }
 function location(node) { return (child(child(node, 'transform') || {}, 'location')?.getAttribute('value') || '0,0,0').split(',').map(Number); }
 function opacity(node) { return Number(child(child(node, 'transform') || {}, 'opacity')?.getAttribute('value') || 1); }
+// Reconstruct from OUTPUT XML only. Interpret native exclusions as opposite
+// winding, preserving cubic segments. Orientation sampling is test-only and
+// independent of the exact production predicates; no generated masks/bridges.
+function nativeContourData(node) {
+  const d=node.getAttribute('d'), excluded=node.getAttribute('exclude')==='true';
+  const segments=svgpath(d).abs().segments,edges=[],points=[];
+  let start,current;
+  for(const segment of segments) {
+    if(segment[0]==='M'){start=current=segment.slice(-2);points.push(current);continue;}
+    const end=segment[0]==='Z'?start:segment.slice(-2);
+    if(segment[0]==='C')for(let i=1;i<=64;i++) {
+      const t=i/64,u=1-t;
+      points.push([0,1].map(c=>u*u*u*current[c]+3*u*u*t*segment[c+1]+3*u*t*t*segment[c+3]+t*t*t*end[c]));
+    }else points.push(end);
+    edges.push({start:current,end,segment});current=end;
+  }
+  const area=points.reduce((sum,p,i)=>{const q=points[(i+1)%points.length];return sum+p[0]*q[1]-q[0]*p[1];},0);
+  if(area===0 || Math.sign(area)===(excluded?-1:1))return d;
+  return 'M '+current.join(' ')+' '+edges.reverse().map(edge=>edge.segment[0]==='C'
+    ? 'C '+[...edge.segment.slice(3,5),...edge.segment.slice(1,3),...edge.start].join(' ')
+    : 'L '+edge.start.join(' ')).join(' ')+' Z';
+}
 function reconstruct(xml) {
   const doc = new DOMParser().parseFromString(xml, 'application/xml'), root = doc.documentElement;
   let nextGradient = 0;
@@ -59,7 +90,8 @@ function reconstruct(xml) {
       }
       const stroke = child(layer, 'path-stroke');
       const outline = stroke ? `stroke="${color(child(stroke,'color').getAttribute('value'))}" stroke-width="${child(stroke,'size').getAttribute('value')}" stroke-linejoin="${stroke.getAttribute('join')}"` : '';
-      return `<g opacity="${opacity(layer)}" transform="translate(${x} ${y})">${definition}<path d="${escape(geometry.getAttribute('d'))}" fill="${paint}" ${outline}/></g>`;
+      const d=geometry.hasAttribute('d')?geometry.getAttribute('d'):children(geometry).map(nativeContourData).join(' ');
+      return `<g opacity="${opacity(layer)}" transform="translate(${x} ${y})">${definition}<path d="${escape(d)}" fill-rule="nonzero" fill="${paint}" ${outline}/></g>`;
     }).join('');
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${root.getAttribute('width')}" height="${root.getAttribute('height')}">${scene(root)}</svg>`;
@@ -78,7 +110,7 @@ async function raster(page, svg, file) {
   fs.writeFileSync(file, Buffer.from(pixels.png,'base64'));return pixels;
 }
 fs.mkdirSync(artifacts,{recursive:true});
-const browser=await chromium.launch({headless:true}), report={status:'PASS',liveProvider:false,nativeAlightImport:false,cases:[]};
+const browser=await chromium.launch({headless:true}), report={status:'PASS',liveProvider:false,nativeAlightImport:false,originalReproducer:sourceIndex>=0?'supplied via --source':'BLOCKED: konzz.svg not attached; synthetic fixture is not the original',cases:[]};
 try {
   const page=await browser.newPage();await page.setContent('<!doctype html><title>SVG paint comparison</title>');
   for(const fixture of fixtures) {
@@ -95,7 +127,11 @@ try {
         for(let c=0;c<3;c++) for(const bg of [0,255]) maxDelta=Math.max(maxDelta,Math.abs(original.bytes[i+c]*a+bg*(1-a)-output.bytes[i+c]*b-bg*(1-b)));
       }
       assert.ok(maxDelta<=2,`${fixture.name}/${quality}: visible channel difference ${maxDelta} exceeds 8-bit rounding tolerance`);
-      report.cases.push({fixture:fixture.name,quality,shapes:result.stats.candidateShapes,maxVisibleChannelDelta:maxDelta});
+      if(fixture.name==='reported-layout-synthetic') {
+        const at=(34*original.width+25)*4+3;
+        assert.equal(original.bytes[at],0,'source has a real transparent hole');assert.equal(output.bytes[at],0,'native exclusion preserves hole alpha');
+      }
+      report.cases.push({fixture:fixture.name,quality,shapes:result.stats.candidateShapes,nativeContours:result.stats.nativeContours,maxVisibleChannelDelta:maxDelta});
     }
   }
   fs.writeFileSync(path.join(artifacts,'results.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
